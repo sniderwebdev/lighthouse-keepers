@@ -52,9 +52,13 @@ const FRAME_UP := 2
 @export var safe_return: NodePath
 
 @onready var _sprite: Sprite2D = %Sprite
+@onready var _interactor: Interactor = %Interactor
+@onready var _prompt: Node2D = %Prompt
+@onready var _prompt_label: Label = %Prompt/Label
 
 var facing: int = 6          ## 8-dir index; see _facing_from()
 var is_soaked := false
+var _ui_blocked := false
 var _fade: Tween
 var _pose_timer := 0.0
 var _last_sent := Vector2.INF
@@ -75,6 +79,8 @@ func _ready() -> void:
 		EventBus.keeper_presence_changed.connect(_on_presence_changed)
 	EventBus.keeper_caught.connect(_on_caught)
 	EventBus.keeper_released.connect(_on_released)
+	_interactor.target_changed.connect(_on_target_changed)
+	EventBus.ui_modal_changed.connect(_on_ui_modal_changed)
 	_apply_facing()
 	_update_visibility()
 
@@ -87,10 +93,12 @@ func _physics_process(delta: float) -> void:
 # --- local: read the pad, move, publish ---
 
 func _drive(delta: float) -> void:
-	var wish := Input.get_vector(
-		input_prefix + "move_left", input_prefix + "move_right",
-		input_prefix + "move_up", input_prefix + "move_down",
-	)
+	var wish := Vector2.ZERO
+	if not _ui_blocked:
+		wish = Input.get_vector(
+			input_prefix + "move_left", input_prefix + "move_right",
+			input_prefix + "move_up", input_prefix + "move_down",
+		)
 	# Direction stays analog so a stick feels like a stick; only FACING is
 	# quantised to eight. Snapping movement itself would make diagonals fight the
 	# thumbstick for no gain at this speed.
@@ -98,9 +106,9 @@ func _drive(delta: float) -> void:
 		wish = wish.normalized()
 
 	var speed := MAX_SPEED * (SOAKED_SPEED_SCALE if is_soaked else 1.0)
-	var target := wish * speed
+	var wanted_velocity := wish * speed
 	var rate := ACCEL if wish != Vector2.ZERO else DECEL
-	velocity = velocity.move_toward(target, rate * delta)
+	velocity = velocity.move_toward(wanted_velocity, rate * delta)
 	move_and_slide()
 
 	if wish != Vector2.ZERO:
@@ -113,6 +121,15 @@ func _drive(delta: float) -> void:
 	if _pose_timer >= POSE_INTERVAL:
 		_pose_timer = 0.0
 		_publish_pose()
+
+	# One context-sensitive button. What it does is whatever the prompt says it
+	# will do, which is whatever the interactor picked from where you are standing
+	# and which way you are looking.
+	if not _ui_blocked and Input.is_action_just_pressed(input_prefix + "interact"):
+		var reachable := _interactor.target
+		if reachable != null and reachable.can_interact():
+			reachable.interact(slot)
+	_place_prompt()
 
 func _publish_pose() -> void:
 	# Standing still costs nothing to say once, then nothing at all.
@@ -176,6 +193,32 @@ func _set_pose(pos: Vector2, p_facing: int) -> void:
 	if p_facing != facing:
 		facing = p_facing
 		_apply_facing()
+
+# --- reaching for things ---
+
+func _on_ui_modal_changed(open: bool) -> void:
+	_ui_blocked = open
+	if open:
+		_prompt.visible = false
+	elif _interactor.target != null:
+		_on_target_changed(_interactor.target)
+
+func _on_target_changed(target: Interactable) -> void:
+	if target == null:
+		_prompt.visible = false
+		return
+	_prompt_label.text = target.prompt_text()
+	_prompt.visible = true
+	_place_prompt()
+
+func _place_prompt() -> void:
+	var target := _interactor.target
+	if target == null or not _prompt.visible:
+		return
+	# Rebuilt each frame so the glyph follows the pad-or-keyboard the player just
+	# used, and pixel-snapped like everything else or the text crawls as you walk.
+	_prompt_label.text = target.prompt_text()
+	_prompt.global_position = target.prompt_position().round()
 
 # --- caught by the water ---
 

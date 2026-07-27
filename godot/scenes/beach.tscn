@@ -1,9 +1,10 @@
-[gd_scene load_steps=12 format=3 uid="uid://blighthousekeeperbeach"]
+[gd_scene load_steps=13 format=3 uid="uid://blighthousekeeperbeach"]
 
 [ext_resource type="Script" path="res://scenes/beach.gd" id="1_beach"]
 [ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
 [ext_resource type="Script" path="res://game/tide_clock.gd" id="3_tide"]
 [ext_resource type="Script" path="res://game/shore_zone.gd" id="4_zone"]
+[ext_resource type="PackedScene" path="res://game/resource_node.tscn" id="5_resource"]
 
 [sub_resource type="RectangleShape2D" id="Shape_wall_h"]
 size = Vector2(1280, 16)
@@ -211,6 +212,51 @@ position = Vector2(940, 400)
 [node name="Actors" type="Node2D" parent="."]
 unique_name_in_owner = true
 y_sort_enabled = true
+
+[node name="driftwood_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(300, 250)
+node_id = "driftwood_01"
+item_id = "driftwood"
+
+[node name="kelp_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(380, 500)
+node_id = "kelp_01"
+item_id = "kelp"
+
+[node name="brass_scrap_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(250, 600)
+node_id = "brass_scrap_01"
+item_id = "brass_scrap"
+
+[node name="glass_shard_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(420, 150)
+node_id = "glass_shard_01"
+item_id = "glass_shard"
+
+[node name="driftwood_02" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(540, 200)
+node_id = "driftwood_02"
+item_id = "driftwood"
+
+[node name="driftwood_03" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(700, 560)
+node_id = "driftwood_03"
+item_id = "driftwood"
+
+[node name="kelp_02" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(620, 400)
+node_id = "kelp_02"
+item_id = "kelp"
+
+[node name="glass_shard_02" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(500, 640)
+node_id = "glass_shard_02"
+item_id = "glass_shard"
+
+[node name="driftwood_04" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(820, 280)
+node_id = "driftwood_04"
+item_id = "driftwood"
 
 [node name="Camera" type="Camera2D" parent="."]
 unique_name_in_owner = true

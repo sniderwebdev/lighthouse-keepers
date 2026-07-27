@@ -45,7 +45,7 @@ theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
 theme_override_colors/font_outline_color = Color(0.098039, 0.082353, 0.211765, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 8
-text = "LIGHTHOUSE KEEPERS — M2 the tide is real"
+text = "LIGHTHOUSE KEEPERS — M3 gather & basket"
 
 [node name="StatusLabel" type="Label" parent="DebugLayer/SafeArea/Lines"]
 unique_name_in_owner = true

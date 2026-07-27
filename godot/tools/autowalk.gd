@@ -26,7 +26,27 @@ const ROUTES: Dictionary = {
 	"to_sandbar": [
 		[9.0, "move_left", "move_right"],
 	],
+	# Park keeper_a on driftwood_01 and take it once.
+	"gather_once": [
+		[6.9, "move_left", ""],
+		[1.8, "move_up", ""],
+		[0.4, "", ""],
+		[0.2, "interact", ""],
+		[3.0, "", ""],
+	],
+	# Same, but mash the button — the world should still only hand it over once.
+	"gather_spam": [
+		[6.9, "move_left", ""],
+		[1.8, "move_up", ""],
+		[0.4, "", ""],
+		[2.5, "interact_spam", ""],
+		[3.0, "", ""],
+	],
 }
+
+## Actions a route step may hold besides a direction.
+const INTERACT := "interact"
+const INTERACT_SPAM := "interact_spam"
 
 @export var route: String = "tour"
 
@@ -42,8 +62,8 @@ func _process(delta: float) -> void:
 	for step in ROUTES.get(route, ROUTES["tour"]):
 		var span: float = step[0]
 		if t < span:
-			_hold("", String(step[1]))
-			_hold("p2_", String(step[2]))
+			_hold("", String(step[1]), t)
+			_hold("p2_", String(step[2]), t)
 			return
 		t -= span
 
@@ -52,7 +72,7 @@ func _process(delta: float) -> void:
 	_finished = true
 	print("[autowalk] route '%s' complete after %.1fs" % [route, _elapsed])
 
-func _hold(prefix: String, action: String) -> void:
+func _hold(prefix: String, action: String, into_step: float) -> void:
 	for dir in DIRS:
 		var full := prefix + dir
 		if dir == action:
@@ -61,6 +81,22 @@ func _hold(prefix: String, action: String) -> void:
 		elif Input.is_action_pressed(full):
 			Input.action_release(full)
 
+	# A single deliberate press: held down, so is_action_just_pressed fires once
+	# and only once no matter how long the step lasts.
+	if action == INTERACT:
+		if not Input.is_action_pressed(prefix + "interact"):
+			Input.action_press(prefix + "interact")
+	elif action == INTERACT_SPAM:
+		# Mashing: released and re-pressed every frame, which is the worst case
+		# the server's idempotency has to survive.
+		if Input.is_action_pressed(prefix + "interact"):
+			Input.action_release(prefix + "interact")
+		else:
+			Input.action_press(prefix + "interact")
+	elif Input.is_action_pressed(prefix + "interact"):
+		Input.action_release(prefix + "interact")
+
 func _release_all(prefix: String) -> void:
 	for dir in DIRS:
 		Input.action_release(prefix + dir)
+	Input.action_release(prefix + "interact")

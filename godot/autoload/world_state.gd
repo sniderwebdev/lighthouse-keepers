@@ -11,6 +11,9 @@ var tide := { "phase": "LOW", "t": 0.0, "cycle": 0, "storm": false }
 var flags: Dictionary = {}        # flag -> bool
 var inventory: Dictionary = {}    # item_id -> int
 var milestones: Dictionary = {}   # milestone_id -> "todo"|"in_progress"|"done"
+## node_id -> is there anything there to pick up. Authoritative: a node only
+## empties or restocks because the server said so, never because we took it.
+var nodes: Dictionary = {}
 var presence: Dictionary = {}     # keeper_id -> bool
 ## slot -> ms of slow walk left when the message arrived. Transient: the world
 ## never remembers that somebody got wet, it only knows they are wet now.
@@ -42,6 +45,11 @@ func apply_diff(diff: Dictionary) -> void:
 			if f == "lamp_lit" and flags[f] == true:
 				EventBus.lamp_lit.emit()   # the climax
 
+	if diff.has("nodes"):
+		for node_id in diff["nodes"]:
+			nodes[node_id] = bool(diff["nodes"][node_id])
+			EventBus.node_changed.emit(node_id, nodes[node_id])
+
 	if diff.has("milestones"):
 		for m in diff["milestones"]:
 			milestones[m] = diff["milestones"][m]
@@ -65,6 +73,9 @@ func apply_diff(diff: Dictionary) -> void:
 # --- read helpers ---
 func has_flag(flag: String) -> bool:
 	return flags.get(flag, false) == true
+
+func node_ready(node_id: String) -> bool:
+	return nodes.get(node_id, true) == true
 
 func count(item_id: String) -> int:
 	return int(inventory.get(item_id, 0))

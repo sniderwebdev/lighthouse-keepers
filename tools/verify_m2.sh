@@ -153,7 +153,7 @@ echo "AC3 — caught on the sandbar at the MID flip: nothing lost,"
 echo "      both clients see the keeper reappear at the yard"
 echo "=============================================================="
 # A walks out onto the sandbar; B just watches and records.
-launch m2_catch_a --slot=keeper_a --world=CATCH1 --autowalk=to_sandbar --debug-gather=3 >/dev/null
+launch m2_catch_a --slot=keeper_a --world=CATCH1 --autowalk=to_sandbar --debug-gather=driftwood_04,kelp_02,glass_shard_02 >/dev/null
 launch m2_catch_b --slot=keeper_b --world=CATCH1 "--trace=$OUT/catch_b.csv" >/dev/null
 sleep 8
 set_tide CATCH1 0.02 >/dev/null   # LOW: the sandbar is walkable

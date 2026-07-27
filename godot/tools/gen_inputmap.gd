@@ -15,6 +15,7 @@ func _init() -> void:
 	_build_for_device(0, "")
 	_build_for_device(1, "p2_")
 	_add_keyboard_adaptation()
+	_fix_ui_actions()
 	var err := ProjectSettings.save()
 	print("ProjectSettings.save() -> %d" % err)
 	quit(err)
@@ -47,6 +48,20 @@ func _add_keyboard_adaptation() -> void:
 	_key("use_tool", KEY_Q)
 	_key("menu_radial", KEY_TAB)
 	_key("menu_pause", KEY_F1)
+
+## Godot ships ui_accept and ui_cancel bound to the KEYBOARD ONLY. Focus moves
+## on a d-pad out of the box, but confirm and back do not — so every menu in the
+## game would be navigable and un-usable on a pad, which the controller-first law
+## forbids outright ("test: unplug the mouse"). Rebound here, on device -1 so
+## both pads work, which is what couch play needs.
+func _fix_ui_actions() -> void:
+	_key("ui_accept", KEY_ENTER)
+	_key("ui_accept", KEY_KP_ENTER)
+	_key("ui_accept", KEY_SPACE)
+	_button("ui_accept", -1, JOY_A)
+
+	_key("ui_cancel", KEY_ESCAPE)
+	_button("ui_cancel", -1, JOY_B)
 
 # --- setting plumbing ---
 

@@ -20,6 +20,8 @@ signal tide_progressed(phase: String, t: float, cycle: int)
 signal inventory_changed(item_id: String, new_count: int)
 signal flag_changed(flag: String, value: bool)
 signal milestone_changed(milestone_id: String, status: String)
+## A resource node emptied (false) or the sea restocked it (true).
+signal node_changed(node_id: String, ready: bool)
 
 ## The tide caught someone. Gentle by design: they wade home and walk slow for a
 ## while, and lose nothing at all (DESIGN §1, pillar 1).
@@ -28,6 +30,9 @@ signal keeper_released(slot: String)
 
 # --- Local gameplay / UI ---
 signal interact_pressed(target: Node)
+## A menu took the screen. Keepers stop reading their pads while this is true, so
+## choosing something never also walks you into the sea.
+signal ui_modal_changed(open: bool)
 signal notification(text: String)            # cozy toast ("A bottle washed ashore")
 signal lamp_lit()                            # the climax — fire confetti, music swell
 

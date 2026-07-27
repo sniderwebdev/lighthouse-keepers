@@ -15,8 +15,10 @@ extends Node
 ##   --net-verbose        dump the Nakama wire trace (noisy)
 ##   --scene=beach|room   which space to enter (default beach)
 ##   --autowalk[=route]   synthesise pad input along a named debug route
-##   --debug-gather=N     send N gather commands, to prove nothing is lost later
-##   --shot=/abs/path.png grab the 640x360 viewport after a few seconds, then quit
+##   --debug-gather=a,b   gather these node ids straight away (debug seeding)
+##   --ui-selftest        drive the basket with synthesised pad input and report
+##   --shot=/abs/path.png grab the 640x360 viewport, then quit
+##   --shot-at=SECONDS    when to grab it (default 6)
 ##
 ## Every line is also printed to stdout, and the state is echoed on a heartbeat,
 ## so a headless run is verifiable without a window.
@@ -43,9 +45,11 @@ var _slots := Net.SLOTS_A
 var _connecting := false
 var _heartbeat := 0.0
 var _shot_path := ""
+var _shot_at := 6.0
 var _autowalk := false
 var _autowalk_route := "tour"
-var _debug_gather := 0
+var _debug_gather: PackedStringArray = []
+var _ui_selftest := false
 var _scene := DEFAULT_SCENE
 var _world: Node2D = null
 
@@ -55,9 +59,11 @@ func _ready() -> void:
 	EventBus.net_slots_claimed.connect(_on_slots_claimed)
 	EventBus.net_error.connect(_on_net_error)
 	EventBus.keeper_presence_changed.connect(_on_presence_changed)
+	EventBus.inventory_changed.connect(_on_inventory_changed)
+	EventBus.node_changed.connect(_on_node_changed)
 
 	_world_label.text = "world:    %s" % _world_code
-	_hint_label.text = "requesting: %s  ·  menu_pause hides this readout" % _slots
+	_hint_label.text = "requesting: %s" % _slots
 	_log("boot: world=%s slots=%s host=%s:%d" % [_world_code, _slots, Net.host, Net.port])
 	if _shot_path != "":
 		_grab_screenshot.call_deferred()
@@ -66,7 +72,7 @@ func _ready() -> void:
 ## Debug affordance: prove the 640x360 viewport actually renders what the labels
 ## say. Windowed only — headless has no framebuffer.
 func _grab_screenshot() -> void:
-	await get_tree().create_timer(6.0).timeout
+	await get_tree().create_timer(_shot_at).timeout
 	var image := get_viewport().get_texture().get_image()
 	var err := image.save_png(_shot_path)
 	_log("screenshot %s -> %s (%dx%d)" % [
@@ -92,13 +98,17 @@ func _parse_flags() -> void:
 			Net.log_level = NakamaLogger.LOG_LEVEL.DEBUG
 		elif arg.begins_with("--shot="):
 			_shot_path = arg.split("=", true, 1)[1]
+		elif arg.begins_with("--shot-at="):
+			_shot_at = float(arg.split("=", true, 1)[1])
 		elif arg == "--autowalk":
 			_autowalk = true
 		elif arg.begins_with("--autowalk="):
 			_autowalk = true
 			_autowalk_route = arg.split("=", true, 1)[1]
 		elif arg.begins_with("--debug-gather="):
-			_debug_gather = int(arg.split("=", true, 1)[1])
+			_debug_gather = arg.split("=", true, 1)[1].split(",")
+		elif arg == "--ui-selftest":
+			_ui_selftest = true
 		elif arg.begins_with("--scene="):
 			var wanted := arg.split("=", true, 1)[1]
 			if SCENES.has(wanted):
@@ -133,17 +143,59 @@ func _enter_world() -> void:
 		return
 	_world = (load(SCENES[_scene]) as PackedScene).instantiate()
 	%WorldHost.add_child(_world)
+	var menus: GameMenus = preload("res://ui/game_menus.tscn").instantiate()
+	add_child(menus)
+	menus.debug_toggle_requested.connect(_toggle_debug_readout)
 	if _autowalk:
 		var walker := preload("res://tools/autowalk.gd").new()
 		walker.name = "AutoWalk"
 		walker.route = _autowalk_route
 		add_child(walker)
 		_log("autowalk engaged: route '%s' (debug input synthesis)" % _autowalk_route)
-	for _i in _debug_gather:
-		Net.send_command(Command.gather("debug_node"))
-	if _debug_gather > 0:
-		_log("debug: sent %d gather commands" % _debug_gather)
+	for node_id in _debug_gather:
+		Net.send_command(Command.gather(node_id))
+	if not _debug_gather.is_empty():
+		_log("debug: gathered %s" % ", ".join(_debug_gather))
+	if _ui_selftest:
+		_run_ui_selftest(menus)
 	_log("world entered: %s (%s)" % [_scene, "couch" if Net.is_couch() else "online"])
+
+## Drives the basket with the REAL actions a pad would send, so what it proves is
+## that the grid answers a d-pad rather than that some method could be called.
+func _run_ui_selftest(menus: GameMenus) -> void:
+	await get_tree().create_timer(2.0).timeout
+	_log("uitest: holding menu_radial")
+	Input.action_press("menu_radial")
+	await get_tree().create_timer(0.5).timeout
+	Input.action_release("menu_radial")
+	await get_tree().create_timer(0.4).timeout
+	_log("uitest: inventory open=%s" % menus.any_open())
+
+	# Focus navigation is EVENT driven, so poking the action state the way the
+	# movement autowalk does would prove nothing — these have to travel the same
+	# path a real button press does.
+	for step in ["ui_right", "ui_right", "ui_left"]:
+		_send_action(step)
+		await get_tree().create_timer(0.35).timeout
+		_log("uitest: pressed %s" % step)
+
+	_log("uitest: cancelling")
+	_send_action("cancel")
+	await get_tree().create_timer(0.5).timeout
+	_log("uitest: inventory open=%s (expected false)" % menus.any_open())
+
+func _send_action(action: String) -> void:
+	var down := InputEventAction.new()
+	down.action = action
+	down.pressed = true
+	Input.parse_input_event(down)
+	var up := InputEventAction.new()
+	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+
+func _toggle_debug_readout() -> void:
+	%DebugLayer.visible = not %DebugLayer.visible
 
 func _process(delta: float) -> void:
 	# WorldState is a read-only mirror; reading it every frame is the intended use.
@@ -160,11 +212,14 @@ func _process(delta: float) -> void:
 			JSON.stringify(WorldState.caught), JSON.stringify(WorldState.inventory),
 		])
 
+## Prompts show the glyph for whatever the player last actually touched, so the
+## whole game asks one helper and one place watches the input stream.
+func _input(event: InputEvent) -> void:
+	ButtonGlyphs.note_event(event)
+
 func _unhandled_input(event: InputEvent) -> void:
 	# Controller-first: buttons only, no cursor anywhere in this path.
-	if event.is_action_pressed("menu_pause") or event.is_action_pressed("p2_menu_pause"):
-		%DebugLayer.visible = not %DebugLayer.visible
-	elif event.is_action_pressed("interact") or event.is_action_pressed("p2_interact"):
+	if event.is_action_pressed("interact") or event.is_action_pressed("p2_interact"):
 		if Net.status == "offline" or Net.status == "error":
 			_log("retry requested")
 			await _join()
@@ -178,8 +233,16 @@ func _on_status_changed(status: String) -> void:
 func _on_slots_claimed(slots: PackedStringArray) -> void:
 	var mode := "couch (both pads)" if slots.size() == 2 else "online"
 	_slots_label.text = "claimed:  %s  [%s]" % [", ".join(slots), mode]
-	_hint_label.text = "move: stick or d-pad  ·  menu_pause hides this readout"
+	_hint_label.text = "%s  ·  hold %s for the basket" % [
+		ButtonGlyphs.prompt("menu_pause", "menu"), ButtonGlyphs.label_for("menu_radial"),
+	]
 	_log("claimed slots %s (%s)" % [", ".join(slots), mode])
+
+func _on_inventory_changed(item_id: String, new_count: int) -> void:
+	_log("inventory %s=%d" % [item_id, new_count])
+
+func _on_node_changed(node_id: String, ready: bool) -> void:
+	_log("node %s %s" % [node_id, "restocked" if ready else "emptied"])
 
 func _on_net_error(message: String) -> void:
 	_hint_label.text = "error: %s — press interact to retry" % message
