@@ -201,13 +201,18 @@ purpose — re-plan after the slice teaches us.
 
 ## Runbook (environment)
 
+- `cd nakama && npm i && npx tsc` → outputs `build/index.js`. Do this FIRST:
+  compose mounts `nakama/build/` at `<data>/modules`, and Nakama refuses to
+  start if the entrypoint is missing.
 - `docker compose up -d` → Nakama console at `http://127.0.0.1:7351`
   (admin/password per compose), game socket `7350`.
-- `cd nakama && npm i && npx tsc` → outputs `build/index.js`, mounted by compose.
-- Godot: open `godot/`, install nakama-godot addon to `addons/`, run scene
-  `scenes/boot.tscn` (M0 creates it). Second instance: `godot --path godot`
-  again. Couch mode: launch flag `--couch` or title-screen toggle.
+- Godot: open `godot/`, run scene `scenes/boot.tscn` (M0 creates it; the
+  nakama-godot addon is vendored under `godot/addons/`). Second instance:
+  `godot --path godot -- --slot=keeper_b`. Couch mode: launch flag `--couch`
+  or title-screen toggle. Full flag list in README.
 - Server logs: `docker compose logs -f nakama`.
+- `tools/verify_m0.sh` runs the M0 acceptance criteria and writes evidence to
+  `.m0-evidence/`.
 
 ## Open items intentionally deferred
 

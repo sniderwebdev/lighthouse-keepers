@@ -23,5 +23,7 @@ signal notification(text: String)            # cozy toast ("A bottle washed asho
 signal lamp_lit()                            # the climax — fire confetti, music swell
 
 # --- Net lifecycle (mirrors net.gd state for UI) ---
-signal net_status_changed(status: String)    # "connecting" | "online" | "offline"
-signal keeper_presence_changed(keeper_id: String, present: bool)
+signal net_status_changed(status: String)    # "connecting" | "online" | "offline" | "error"
+signal net_error(message: String)            # join refused, auth failed, socket dropped
+signal net_slots_claimed(slots: PackedStringArray)  # which keeper slot(s) THIS client drives
+signal keeper_presence_changed(keeper_id: String, present: bool)  # keeper_id = slot

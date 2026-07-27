@@ -14,3 +14,4 @@ nakama/data/
 
 # Local scratch
 *.log
+.m0-evidence/

@@ -1,0 +1,2 @@
+ddbb873495b7baf8aa99ad2b18dcf348c32aa446
+https://github.com/heroiclabs/nakama-godot

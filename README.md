@@ -64,16 +64,48 @@ DESIGN.md                       the living design doc
 
 ## Run it
 
-1. **Server:** install Nakama (Docker is easiest). Add the TS runtime, register the
-   match in `main.ts` (`initializer.registerMatch("lighthouse", {...})`), `tsc`, mount
-   `build/index.js`. Bring up Nakama + Postgres.
-2. **Client:** drop the [nakama-godot](https://github.com/heroiclabs/nakama-godot)
-   addon into the Godot project, then fill the TODOs in `net.gd` (auth, socket,
-   join match). Point `host`/`port` at your server.
-3. **First content:** author a few `.tres` files under `godot/content/{items,recipes,
-   milestones,bottles}/`, and mirror the authoritative recipe/cost tables in
-   `match_handler.ts`. Wire a button to `Net.send_command(Command.gather("driftwood_01"))`
-   and watch the inventory update on both clients.
+**Build the server runtime BEFORE bringing the stack up** — compose mounts only
+`nakama/build/`, which does not exist in a fresh checkout.
+
+```sh
+cd nakama && npm install && npx tsc && cd ..   # -> nakama/build/index.js
+docker compose up -d                            # Nakama + Postgres
+docker compose logs nakama | grep "runtime loaded"
+```
+
+Nakama console: `http://127.0.0.1:7351` (admin / lighthousedev1). Game socket: `7350`.
+
+**Client.** The [nakama-godot](https://github.com/heroiclabs/nakama-godot) addon is
+vendored at `godot/addons/com.heroiclabs.nakama/` (see `INSTALLED_FROM.txt`) and
+registered as the `Nakama` autoload. Open `godot/` in Godot 4 and run — the main
+scene is `scenes/boot.tscn`.
+
+Launch flags (after a `--` separator when using the CLI):
+
+| Flag | Effect |
+|---|---|
+| `--slot=keeper_a` / `--slot=keeper_b` | claim one keeper (online play) |
+| `--couch` | claim BOTH slots on one machine, two pads |
+| `--world=TEST01` | world code to join (default `TEST01`) |
+| `--host= --port=` | point at a non-local server |
+| `--net-verbose` | dump the Nakama wire trace |
+| `--shot=/abs/path.png` | grab the 640×360 viewport, then quit |
+
+```sh
+# two keepers, online, on one PC
+godot --path godot -- --slot=keeper_a --world=TEST01
+godot --path godot -- --slot=keeper_b --world=TEST01
+# one PC, two pads
+godot --path godot -- --couch --world=TEST01
+```
+
+**Verify the milestone:** `tools/verify_m0.sh` runs every M0 acceptance criterion
+against the live stack and writes its evidence to `.m0-evidence/`.
+
+**Next content:** author `.tres` files under `godot/content/{items,recipes,
+milestones,bottles}/`, and mirror the authoritative recipe/cost tables in
+`match_handler.ts`. Wire a button to `Net.send_command(Command.gather("driftwood_01"))`
+and watch the inventory update on both clients.
 
 ## Keeper slots (couch + online unified)
 
