@@ -70,6 +70,29 @@ const ZONE_PHASES: { [zone: string]: string[] } = {
 // cruel (DESIGN.md §1, pillar 1).
 const SLOW_WALK_MS = 20000;
 
+// The spawn table. Every resource node in the world: what it gives, how much,
+// which zone it sits in, and how many tide cycles until the sea brings it back.
+// Authoritative — the scene places matching ids but has no say in the yields.
+// Expanding the game is adding rows here (DESIGN.md §2, "tide as content
+// delivery"), not writing code.
+interface NodeDef {
+  item: string;
+  yield: number;
+  zone: string;
+  respawn_cycles: number;
+}
+const NODES: { [id: string]: NodeDef } = {
+  driftwood_01: { item: "driftwood", yield: 3, zone: "sandbar", respawn_cycles: 1 },
+  driftwood_02: { item: "driftwood", yield: 1, zone: "mid_beach", respawn_cycles: 1 },
+  driftwood_03: { item: "driftwood", yield: 1, zone: "mid_beach", respawn_cycles: 1 },
+  driftwood_04: { item: "driftwood", yield: 2, zone: "yard", respawn_cycles: 2 },
+  kelp_01: { item: "kelp", yield: 2, zone: "sandbar", respawn_cycles: 1 },
+  kelp_02: { item: "kelp", yield: 1, zone: "mid_beach", respawn_cycles: 1 },
+  brass_scrap_01: { item: "brass_scrap", yield: 1, zone: "sandbar", respawn_cycles: 2 },
+  glass_shard_01: { item: "glass_shard", yield: 1, zone: "sandbar", respawn_cycles: 2 },
+  glass_shard_02: { item: "glass_shard", yield: 1, zone: "mid_beach", respawn_cycles: 2 },
+};
+
 interface TideState {
   phase: string;
   t: number;
@@ -86,6 +109,10 @@ interface WorldState {
   flags: { [k: string]: boolean };
   inventory: { [k: string]: number };
   milestones: { [k: string]: string };  // "todo" | "in_progress" | "done"
+  // node id -> which tide cycle it was taken on. A node not in here is ready.
+  // Persisted: a world you come back to should remember what you already picked
+  // up, and the sea should have restocked it while you were away.
+  nodes: { [id: string]: number };
   updated_at: number;
 }
 
@@ -217,6 +244,7 @@ const matchJoin: nkruntime.MatchJoinFunction = (ctx, logger, nk, dispatcher, tic
         flags: s.world.flags,
         inventory: s.world.inventory,
         milestones: s.world.milestones,
+        nodes: nodeStates(s),
         presence: s.presence,
         caught: remainingCaught(s),
         you: { slots: granted, world: s.worldId },
@@ -324,6 +352,12 @@ const matchSignal: nkruntime.MatchSignalFunction = (ctx, logger, nk, d, tick, st
   }
   s.world.tide.t = t;
   s.world.tide.phase = PHASES[Math.floor(t * PHASES.length) % PHASES.length];
+  if (req.cycle !== undefined && isFinite(Number(req.cycle))) {
+    s.world.tide.cycle = Math.floor(Number(req.cycle));
+    // Jumping the cycle has to run the spawn roll, or the shore would stay bare
+    // until the next natural rollover eight minutes later.
+    rollSpawns(s, d);
+  }
   s.dirty = true;
   broadcast(d, {
     tide: { phase: s.world.tide.phase, t: t, cycle: s.world.tide.cycle, storm: s.world.tide.storm },
@@ -341,9 +375,24 @@ function handleCommand(
   const w = s.world;
   switch (op) {
     case OP.GATHER: {
-      // TODO(M3): look up node -> yield; for now grant 1 driftwood as illustration.
-      grant(s, "driftwood", 1);
-      broadcast(dispatcher, { inventory: { driftwood: w.inventory["driftwood"] } });
+      const nodeId = String(data.node_id || "");
+      const def = NODES[nodeId];
+      if (!def) return;                       // no such node; silent reject = cozy
+      if (!nodeIsReady(w, nodeId, def)) return;
+
+      // Taken in the SAME tick it is granted. That single ordering is the whole
+      // of the idempotency: a second GATHER for this node — whether from a
+      // mashed button, a duplicated packet, or the other keeper reaching for it
+      // at the same moment — finds it already taken and grants nothing.
+      w.nodes[nodeId] = w.tide.cycle;
+      grant(s, def.item, def.yield);
+      s.dirty = true;
+
+      const inv: { [k: string]: number } = {};
+      inv[def.item] = w.inventory[def.item] || 0;
+      const nodeDiff: { [k: string]: boolean } = {};
+      nodeDiff[nodeId] = false;
+      broadcast(dispatcher, { inventory: inv, nodes: nodeDiff });
       break;
     }
     case OP.CRAFT: {
@@ -522,6 +571,9 @@ function advanceTide(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
   if (t.t >= 1) {
     t.t -= 1;
     t.cycle += 1;
+    // The sea restocks the shore on cycle boundaries, never mid-cycle: the tide
+    // is the only clock the world has, and content arrives on it (DESIGN §2).
+    rollSpawns(s, dispatcher);
   }
   // phase index from t (4 phases per cycle), with rare storm on HIGH.
   const idx = Math.floor(t.t * PHASES.length) % PHASES.length;
@@ -542,6 +594,44 @@ function resolveSlot(s: MatchState, sessionId: string, explicit?: string): Slot 
     return claimed.indexOf(explicit) >= 0 ? explicit : null;
   }
   return claimed.length === 1 ? claimed[0] : null;
+}
+
+// --- resource nodes ---
+
+function nodeIsReady(w: WorldState, nodeId: string, def: NodeDef): boolean {
+  const takenOn = w.nodes[nodeId];
+  if (takenOn === undefined) return true;
+  return w.tide.cycle - takenOn >= def.respawn_cycles;
+}
+
+/// Ready state for every known node, for the join snapshot.
+function nodeStates(s: MatchState): { [id: string]: boolean } {
+  const out: { [id: string]: boolean } = {};
+  for (const id in NODES) out[id] = nodeIsReady(s.world, id, NODES[id]);
+  return out;
+}
+
+/// Hand back to the shore whatever has been gone long enough. Announced as a
+/// diff so both clients grow their driftwood back at the same moment.
+function rollSpawns(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
+  const restocked: { [id: string]: boolean } = {};
+  let any = false;
+  for (const id in s.world.nodes) {
+    const def = NODES[id];
+    if (!def) {
+      delete s.world.nodes[id];   // a node that no longer exists in the table
+      continue;
+    }
+    if (nodeIsReady(s.world, id, def)) {
+      delete s.world.nodes[id];
+      restocked[id] = true;
+      any = true;
+    }
+  }
+  if (any) {
+    s.dirty = true;
+    broadcast(dispatcher, { nodes: restocked });
+  }
 }
 
 // --- helpers ---
@@ -581,6 +671,7 @@ function loadWorld(nk: nkruntime.Nakama, worldId: string): WorldState {
       flags: stored.flags || {},
       inventory: stored.inventory || {},
       milestones: stored.milestones || {},
+      nodes: stored.nodes || {},
       updated_at: stored.updated_at || 0,
     };
   }
@@ -590,6 +681,7 @@ function loadWorld(nk: nkruntime.Nakama, worldId: string): WorldState {
     flags: {},
     inventory: {},
     milestones: {},
+    nodes: {},
     updated_at: Date.now(),
   };
 }
