@@ -1,5 +1,7 @@
 extends Node2D
-## World — the playable room for M1.
+class_name PlayableWorld
+## The base every playable space is built on — the plain test room of M1 and the
+## tide-governed beach of M2 both run this.
 ##
 ## Spawns both keeper identities and decides, per slot, whether this client is
 ## driving it or mirroring it. That decision comes from Net.claimed_slots, which
@@ -15,13 +17,15 @@ const KEEPER_SCENE := preload("res://game/keeper.tscn")
 const SHEET_A: Texture2D = preload("res://art/placeholder/keeper_a.png")
 const SHEET_B: Texture2D = preload("res://art/placeholder/keeper_b.png")
 
-## Walkable extent, matching the wall colliders in world.tscn.
-const ROOM := Rect2(0, 0, 1280, 720)
+## Walkable extent, matching this scene's wall colliders.
+@export var room := Rect2(0, 0, 1280, 720)
 
 @onready var _actors: Node2D = %Actors
 @onready var _camera: KeeperCamera = %Camera
 @onready var _spawn_a: Marker2D = %SpawnA
 @onready var _spawn_b: Marker2D = %SpawnB
+## Where the world puts a keeper down when it has to move them somewhere safe.
+@onready var _safe_return: Marker2D = %SafeReturn
 
 var _keepers: Dictionary = {}   ## slot -> Keeper
 var _trace: FileAccess = null
@@ -29,7 +33,7 @@ var _trace_clock := 0.0
 
 func _ready() -> void:
 	_spawn_keepers()
-	_camera.apply_room_bounds(ROOM)
+	_camera.apply_room_bounds(room)
 	_camera.set_targets(_local_keepers())
 	_open_trace()
 
@@ -46,6 +50,9 @@ func _spawn(slot: String, sheet: Texture2D, at: Vector2) -> void:
 	keeper.position = at
 	keeper.name = slot
 	_actors.add_child(keeper)
+	# Only meaningful once both nodes share a tree — a relative path between an
+	# orphan and a node in the scene has no common parent to be relative to.
+	keeper.safe_return = keeper.get_path_to(_safe_return)
 	_keepers[slot] = keeper
 
 ## Device 0 drives the slot you picked at session start; device 1 drives the
@@ -54,6 +61,9 @@ func _input_prefix_for(slot: String) -> String:
 	if not Net.is_couch():
 		return ""
 	return "" if slot == Command.SLOT_A else "p2_"
+
+func keeper_for(slot: String) -> Keeper:
+	return _keepers.get(slot)
 
 func _local_keepers() -> Array[Node2D]:
 	var out: Array[Node2D] = []

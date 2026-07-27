@@ -17,6 +17,7 @@ enum Op {
 	TANDEM       = 6,   # { "gate_id": String, "slot": String } -> fires when BOTH slots submit
 	CARRY_ASSIST = 7,   # { "object_id": String, "slot": String }
 	LOG_SESSION  = 8,   # { }  -> server assembles keeper's log entry
+	CAUGHT       = 9,   # { "slot": String, "zone": String } -> wade home, slow a while
 }
 
 ## Non-command opcodes. These are not intents and the server does not validate,
@@ -62,6 +63,12 @@ static func carry_assist(object_id: String, slot: String) -> Dictionary:
 
 static func log_session() -> Dictionary:
 	return make(Op.LOG_SESSION, {})
+
+## "The water reached me." A report, not an assertion: the client knows where it
+## is standing, but only the server knows whether that ground is under water, and
+## only the server decides what happens next.
+static func caught(slot: String, zone: String) -> Dictionary:
+	return make(Op.CAUGHT, { "slot": slot, "zone": zone })
 
 ## Presentation, not a command — see OP_POSE. Sent on its own opcode so it can
 ## never be mistaken for something the world is held to.

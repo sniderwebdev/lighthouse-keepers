@@ -13,6 +13,9 @@ extends Node
 ##   --world=TEST01       world code to join (default TEST01)
 ##   --host=127.0.0.1 --port=7350
 ##   --net-verbose        dump the Nakama wire trace (noisy)
+##   --scene=beach|room   which space to enter (default beach)
+##   --autowalk[=route]   synthesise pad input along a named debug route
+##   --debug-gather=N     send N gather commands, to prove nothing is lost later
 ##   --shot=/abs/path.png grab the 640x360 viewport after a few seconds, then quit
 ##
 ## Every line is also printed to stdout, and the state is echoed on a heartbeat,
@@ -20,7 +23,13 @@ extends Node
 
 const DEFAULT_WORLD := "TEST01"
 const HEARTBEAT_SECONDS := 2.0
-const WORLD_SCENE := preload("res://scenes/world.tscn")
+## The beach is where the game is; the plain room is kept because M1's movement
+## and camera evidence is measured against its geometry.
+const SCENES := {
+	"beach": "res://scenes/beach.tscn",
+	"room": "res://scenes/world.tscn",
+}
+const DEFAULT_SCENE := "beach"
 
 @onready var _status_label: Label = %StatusLabel
 @onready var _slots_label: Label = %SlotsLabel
@@ -35,6 +44,9 @@ var _connecting := false
 var _heartbeat := 0.0
 var _shot_path := ""
 var _autowalk := false
+var _autowalk_route := "tour"
+var _debug_gather := 0
+var _scene := DEFAULT_SCENE
 var _world: Node2D = null
 
 func _ready() -> void:
@@ -82,6 +94,17 @@ func _parse_flags() -> void:
 			_shot_path = arg.split("=", true, 1)[1]
 		elif arg == "--autowalk":
 			_autowalk = true
+		elif arg.begins_with("--autowalk="):
+			_autowalk = true
+			_autowalk_route = arg.split("=", true, 1)[1]
+		elif arg.begins_with("--debug-gather="):
+			_debug_gather = int(arg.split("=", true, 1)[1])
+		elif arg.begins_with("--scene="):
+			var wanted := arg.split("=", true, 1)[1]
+			if SCENES.has(wanted):
+				_scene = wanted
+			else:
+				push_warning("unknown --scene=%s; using %s" % [wanted, _scene])
 
 func _normalize_slot(raw: String) -> String:
 	match raw.to_lower():
@@ -108,14 +131,19 @@ func _join() -> void:
 func _enter_world() -> void:
 	if _world != null:
 		return
-	_world = WORLD_SCENE.instantiate()
+	_world = (load(SCENES[_scene]) as PackedScene).instantiate()
 	%WorldHost.add_child(_world)
 	if _autowalk:
 		var walker := preload("res://tools/autowalk.gd").new()
 		walker.name = "AutoWalk"
+		walker.route = _autowalk_route
 		add_child(walker)
-		_log("autowalk engaged (debug input synthesis)")
-	_log("world entered (%s)" % ("couch" if Net.is_couch() else "online"))
+		_log("autowalk engaged: route '%s' (debug input synthesis)" % _autowalk_route)
+	for _i in _debug_gather:
+		Net.send_command(Command.gather("debug_node"))
+	if _debug_gather > 0:
+		_log("debug: sent %d gather commands" % _debug_gather)
+	_log("world entered: %s (%s)" % [_scene, "couch" if Net.is_couch() else "online"])
 
 func _process(delta: float) -> void:
 	# WorldState is a read-only mirror; reading it every frame is the intended use.
@@ -126,9 +154,10 @@ func _process(delta: float) -> void:
 	_heartbeat += delta
 	if _heartbeat >= HEARTBEAT_SECONDS:
 		_heartbeat = 0.0
-		_log("HEARTBEAT status=%s claimed=[%s] %s presence=[a=%s b=%s]" % [
+		_log("HEARTBEAT status=%s claimed=[%s] %s presence=[a=%s b=%s] caught=%s inv=%s" % [
 			Net.status, ", ".join(Net.claimed_slots), _tide_label.text.replace("tide:     ", "tide="),
 			WorldState.presence.get("keeper_a", false), WorldState.presence.get("keeper_b", false),
+			JSON.stringify(WorldState.caught), JSON.stringify(WorldState.inventory),
 		])
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -163,5 +192,7 @@ func _on_presence_changed(keeper_id: String, present: bool) -> void:
 	_presence_label.text = "presence: %s" % " ".join(parts)
 	_log("presence %s=%s" % [keeper_id, present])
 
+## Wall-clock stamped: the milestone verifiers compare WHEN two clients reacted
+## to the same broadcast, which needs a clock both processes share.
 func _log(line: String) -> void:
-	print("[boot:%s] %s" % [_slots, line])
+	print("%.3f [boot:%s] %s" % [Time.get_unix_time_from_system(), _slots, line])

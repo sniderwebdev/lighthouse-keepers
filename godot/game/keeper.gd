@@ -16,6 +16,11 @@ class_name Keeper
 const MAX_SPEED := 90.0
 const ACCEL := 600.0
 const DECEL := 900.0
+## Wading home wet. Slow enough to feel like a consequence, fast enough that it
+## never becomes a punishment you sit through (DESIGN §1, pillar 1).
+const SOAKED_SPEED_SCALE := 0.5
+## How long the keeper is faded out while the water carries them home.
+const CATCH_FADE := 0.45
 
 const POSE_HZ := 10.0
 const POSE_INTERVAL := 1.0 / POSE_HZ
@@ -42,9 +47,15 @@ const FRAME_UP := 2
 ## Which placeholder sheet this keeper wears. Set by the world when it spawns.
 @export var sheet: Texture2D
 
+## Where the water puts you down again. The yard is safe at every phase the beach
+## is not, so it is always somewhere you can stand.
+@export var safe_return: NodePath
+
 @onready var _sprite: Sprite2D = %Sprite
 
 var facing: int = 6          ## 8-dir index; see _facing_from()
+var is_soaked := false
+var _fade: Tween
 var _pose_timer := 0.0
 var _last_sent := Vector2.INF
 
@@ -62,6 +73,8 @@ func _ready() -> void:
 	if not is_local:
 		EventBus.keeper_pose_received.connect(_on_pose_received)
 		EventBus.keeper_presence_changed.connect(_on_presence_changed)
+	EventBus.keeper_caught.connect(_on_caught)
+	EventBus.keeper_released.connect(_on_released)
 	_apply_facing()
 	_update_visibility()
 
@@ -84,7 +97,8 @@ func _drive(delta: float) -> void:
 	if wish.length() > 1.0:
 		wish = wish.normalized()
 
-	var target := wish * MAX_SPEED
+	var speed := MAX_SPEED * (SOAKED_SPEED_SCALE if is_soaked else 1.0)
+	var target := wish * speed
 	var rate := ACCEL if wish != Vector2.ZERO else DECEL
 	velocity = velocity.move_toward(target, rate * delta)
 	move_and_slide()
@@ -162,6 +176,45 @@ func _set_pose(pos: Vector2, p_facing: int) -> void:
 	if p_facing != facing:
 		facing = p_facing
 		_apply_facing()
+
+# --- caught by the water ---
+
+## The server has confirmed this keeper was caught. BOTH clients play the fade,
+## so the moment reads the same on either screen; only the client that drives the
+## keeper moves it, because only its poses are believed. The other side sees them
+## reappear at the yard because the pose channel says so, not because it guessed.
+func _on_caught(p_slot: String, _slow_seconds: float) -> void:
+	if p_slot != slot:
+		return
+	is_soaked = true
+	if is_local:
+		velocity = Vector2.ZERO
+		_last_sent = Vector2.INF   # the teleport must go out, not be deduplicated
+	_play_catch_fade()
+
+func _on_released(p_slot: String) -> void:
+	if p_slot == slot:
+		is_soaked = false
+
+func _play_catch_fade() -> void:
+	if _fade != null and _fade.is_valid():
+		_fade.kill()
+	_fade = create_tween()
+	_fade.tween_property(_sprite, "modulate:a", 0.0, CATCH_FADE)
+	# Nothing is lost here — no inventory, no progress. The keeper is set down in
+	# the yard, wet, and that is the whole of it.
+	_fade.tween_callback(_return_to_safety)
+	_fade.tween_property(_sprite, "modulate:a", 1.0, CATCH_FADE)
+
+func _return_to_safety() -> void:
+	if not is_local:
+		return
+	var marker := get_node_or_null(safe_return) as Node2D
+	if marker == null:
+		push_warning("keeper %s has nowhere safe to return to" % slot)
+		return
+	position = marker.global_position
+	_publish_pose()
 
 # --- presence ---
 

@@ -13,9 +13,18 @@ extends Node
 
 # --- World-state echoes (emitted by WorldState after it applies an authoritative diff) ---
 signal tide_changed(phase: String, t: float)
+## Every authoritative tide update, phase flip or not. The sky IS the tide clock
+## (DESIGN §2), so it has to hear the quiet progress between flips too —
+## listening only for phase changes leaves it free-running for minutes at a time.
+signal tide_progressed(phase: String, t: float, cycle: int)
 signal inventory_changed(item_id: String, new_count: int)
 signal flag_changed(flag: String, value: bool)
 signal milestone_changed(milestone_id: String, status: String)
+
+## The tide caught someone. Gentle by design: they wade home and walk slow for a
+## while, and lose nothing at all (DESIGN §1, pillar 1).
+signal keeper_caught(slot: String, slow_seconds: float)
+signal keeper_released(slot: String)
 
 # --- Local gameplay / UI ---
 signal interact_pressed(target: Node)

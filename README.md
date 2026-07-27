@@ -88,6 +88,7 @@ Launch flags (after a `--` separator when using the CLI):
 | `--couch` | claim BOTH slots on one machine, two pads |
 | `--world=TEST01` | world code to join (default `TEST01`) |
 | `--host= --port=` | point at a non-local server |
+| `--scene=beach` / `--scene=room` | which space to enter (default `beach`) |
 | `--net-verbose` | dump the Nakama wire trace |
 | `--shot=/abs/path.png` | grab the 640×360 viewport, then quit |
 
@@ -99,8 +100,22 @@ godot --path godot -- --slot=keeper_b --world=TEST01
 godot --path godot -- --couch --world=TEST01
 ```
 
-**Verify the milestone:** `tools/verify_m0.sh` runs every M0 acceptance criterion
-against the live stack and writes its evidence to `.m0-evidence/`.
+**Verify the milestones:** `tools/verify_m0.sh`, `verify_m1.sh` and `verify_m2.sh`
+run every acceptance criterion for their milestone against the live stack and
+write evidence to `.m0-evidence/`, `.m1-evidence/`, `.m2-evidence/`.
+
+**The tide.** One cycle is eight real minutes (`LOW → MID → HIGH → MID`), and it
+only advances while at least one keeper is connected. The sky's colour IS the
+tide readout — there is no meter, by design (DESIGN §2). Because eight minutes is
+a long time to wait for a phase, the local stack exposes a `debug_set_tide` RPC
+that jumps the clock; it answers only when Nakama is started with
+`LIGHTHOUSE_DEV=1`, which `docker-compose.yml` sets and a real deploy would not.
+
+```sh
+curl -s -X POST http://127.0.0.1:7350/v2/rpc/debug_set_tide \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '"{\"world_code\":\"TEST01\",\"t\":0.5}"'   # 0.0 LOW, 0.25 MID, 0.5 HIGH
+```
 
 **Next content:** author `.tres` files under `godot/content/{items,recipes,
 milestones,bottles}/`, and mirror the authoritative recipe/cost tables in

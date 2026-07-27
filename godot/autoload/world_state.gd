@@ -12,6 +12,9 @@ var flags: Dictionary = {}        # flag -> bool
 var inventory: Dictionary = {}    # item_id -> int
 var milestones: Dictionary = {}   # milestone_id -> "todo"|"in_progress"|"done"
 var presence: Dictionary = {}     # keeper_id -> bool
+## slot -> ms of slow walk left when the message arrived. Transient: the world
+## never remembers that somebody got wet, it only knows they are wet now.
+var caught: Dictionary = {}
 
 ## Called by Net when an authoritative diff arrives. A diff may contain any
 ## subset of keys; we apply only what's present and emit granular signals.
@@ -19,6 +22,11 @@ func apply_diff(diff: Dictionary) -> void:
 	if diff.has("tide"):
 		var old_phase: String = tide.get("phase", "")
 		tide.merge(diff["tide"], true)
+		# Progress fires on every update; tide_changed stays the "the phase
+		# flipped" signal that gameplay reacts to.
+		EventBus.tide_progressed.emit(
+			tide.get("phase", ""), tide.get("t", 0.0), int(tide.get("cycle", 0))
+		)
 		if tide.get("phase", "") != old_phase:
 			EventBus.tide_changed.emit(tide["phase"], tide.get("t", 0.0))
 
@@ -43,6 +51,16 @@ func apply_diff(diff: Dictionary) -> void:
 		for k in diff["presence"]:
 			presence[k] = diff["presence"][k]
 			EventBus.keeper_presence_changed.emit(k, presence[k])
+
+	if diff.has("caught"):
+		for slot in diff["caught"]:
+			var remaining_ms: int = int(diff["caught"][slot])
+			if remaining_ms > 0:
+				caught[slot] = remaining_ms
+				EventBus.keeper_caught.emit(slot, float(remaining_ms) / 1000.0)
+			else:
+				caught.erase(slot)
+				EventBus.keeper_released.emit(slot)
 
 # --- read helpers ---
 func has_flag(flag: String) -> bool:

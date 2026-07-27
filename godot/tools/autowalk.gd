@@ -11,15 +11,24 @@ extends Node
 
 const DIRS: PackedStringArray = ["move_right", "move_down", "move_left", "move_up"]
 
-## [seconds, keeper_a direction, keeper_b direction]
-const ROUTE: Array = [
-	[6.0, "move_right", "move_right"],
-	[4.0, "move_down", "move_down"],
-	[6.0, "move_left", "move_left"],
-	[4.0, "move_up", "move_up"],
-	[3.0, "move_right", "move_left"],   # separate
-	[3.0, "move_left", "move_right"],   # converge
-]
+## Named routes, each a list of [seconds, keeper_a direction, keeper_b direction].
+const ROUTES: Dictionary = {
+	# The camera tour: together across the room, then apart and back.
+	"tour": [
+		[6.0, "move_right", "move_right"],
+		[4.0, "move_down", "move_down"],
+		[6.0, "move_left", "move_left"],
+		[4.0, "move_up", "move_up"],
+		[3.0, "move_right", "move_left"],   # separate
+		[3.0, "move_left", "move_right"],   # converge
+	],
+	# Walk keeper_a out onto the sandbar and leave them there to be caught.
+	"to_sandbar": [
+		[9.0, "move_left", "move_right"],
+	],
+}
+
+@export var route: String = "tour"
 
 var _elapsed := 0.0
 var _finished := false
@@ -30,7 +39,7 @@ func _process(delta: float) -> void:
 	_elapsed += delta
 
 	var t := _elapsed
-	for step in ROUTE:
+	for step in ROUTES.get(route, ROUTES["tour"]):
 		var span: float = step[0]
 		if t < span:
 			_hold("", String(step[1]))
@@ -41,7 +50,7 @@ func _process(delta: float) -> void:
 	_release_all("")
 	_release_all("p2_")
 	_finished = true
-	print("[autowalk] route complete after %.1fs" % _elapsed)
+	print("[autowalk] route '%s' complete after %.1fs" % [route, _elapsed])
 
 func _hold(prefix: String, action: String) -> void:
 	for dir in DIRS:

@@ -4,7 +4,10 @@
 #   docker compose up -d && (cd nakama && npx tsc) && tools/verify_m1.sh
 #
 # Clients are driven headlessly by --autowalk, which synthesises input through
-# the real action map, and record a per-frame CSV via --trace. The assertions are
+# the real action map, and record a per-frame CSV via --trace. They run in the
+# plain room rather than the beach: movement and camera numbers are measured
+# against that geometry, and a tide that flooded a zone mid-run would teleport a
+# keeper and look exactly like the mirror stutter this is trying to detect. The assertions are
 # made against those traces, so the evidence for each AC is a file you can plot.
 set -uo pipefail
 
@@ -39,9 +42,9 @@ echo "      mirror moves smoothly (no teleporting at 10Hz)"
 echo "=============================================================="
 # A walks. B does not, and only traces — so B's keeper_a row is purely the
 # mirrored, interpolated remote.
-launch m1_online_a --slot=keeper_a --world=ONLINE1 --autowalk >/dev/null
+launch m1_online_a --slot=keeper_a --world=ONLINE1 --scene=room --autowalk >/dev/null
 sleep 3
-launch m1_online_b --slot=keeper_b --world=ONLINE1 "--trace=$OUT/online_b.csv" >/dev/null
+launch m1_online_b --slot=keeper_b --world=ONLINE1 --scene=room "--trace=$OUT/online_b.csv" >/dev/null
 sleep 26
 kill_all
 
@@ -79,7 +82,7 @@ echo "=============================================================="
 echo "AC2 — couch: both pads move their own keeper simultaneously;"
 echo "      camera keeps both on screen across the test room"
 echo "=============================================================="
-launch m1_couch --couch --world=COUCH1 --autowalk "--trace=$OUT/couch.csv" >/dev/null
+launch m1_couch --couch --world=COUCH1 --scene=room --autowalk "--trace=$OUT/couch.csv" >/dev/null
 sleep 30
 kill_all
 

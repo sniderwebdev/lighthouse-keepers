@@ -16,3 +16,4 @@ nakama/data/
 *.log
 .m0-evidence/
 .m1-evidence/
+.m2-evidence/
