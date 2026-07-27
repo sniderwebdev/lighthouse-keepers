@@ -22,6 +22,13 @@ const OP = {
   TANDEM: 6,       // co-op gate: { gate_id } — fires when BOTH slots submit in window
   CARRY_ASSIST: 7, // two-person carry: { object_id }
   LOG_SESSION: 8,  // request session log entry assembly
+
+  // Not commands. Where a keeper APPEARS to be is presentation, not authoritative
+  // shared state (PLAN.md M1): never validated against the world, never persisted,
+  // never merged into WorldState. Relayed only.
+  POSE: 20,        // client -> server: { slot, x, y, f, t }
+  POSE_ECHO: 120,  // server -> clients: { poses: { slot: {x,y,f,t} } }
+
   STATE_DIFF: 100, // server -> client
 };
 
@@ -31,11 +38,20 @@ type Slot = "keeper_a" | "keeper_b";
 const SLOTS: Slot[] = ["keeper_a", "keeper_b"];
 const TANDEM_WINDOW_MS = 10000;
 
-const TICK_RATE = 2;                 // loops per second
+// The loop is the only place incoming messages are drained, so it also caps how
+// fast poses can be relayed. Clients send position at 10Hz (PLAN.md M1), so the
+// loop has to run at least that often or the mirror stutters at 2Hz.
+const TICK_RATE = 10;                // loops per second
 const SECONDS_PER_CYCLE = 480;       // full LOW->...->LOW
 const PHASES = ["LOW", "MID", "HIGH", "MID"]; // STORM injected occasionally
 
 const STORAGE_WORLDS = "worlds";
+
+// A world with nobody in it eventually stops existing, and is rebuilt from
+// storage on the next join. Without this, every match ever created lives forever
+// — including the ones discarded when two keepers race to create the same world.
+// Generous, because a freshly created match is empty until its creator joins.
+const IDLE_TERMINATE_TICKS = TICK_RATE * 120;   // two minutes
 
 interface TideState {
   phase: string;
@@ -69,8 +85,19 @@ interface MatchState {
   pending: { [sessionId: string]: Slot[] };
   // tandem gate bookkeeping: gate_id -> slot -> timestamp of intent
   tandem: { [gateId: string]: { [slot: string]: number } };
+  // latest presentation pose per slot. Runtime only — poses are never
+  // persisted and never enter the world state.
+  poses: { [slot: string]: Pose };
   dirty: boolean;
   ticksSinceSave: number;
+  idleTicks: number;
+}
+
+interface Pose {
+  x: number;
+  y: number;
+  f: number;  // facing, 0-7
+  t: number;  // SENDER's clock in ms, relayed untouched
 }
 
 // Server-side recipe/cost tables. (Mirror of the .tres content; the SERVER copy
@@ -95,8 +122,10 @@ const matchInit: nkruntime.MatchInitFunction = (ctx, logger, nk, params) => {
     claims: {},
     pending: {},
     tandem: {},
+    poses: {},
     dirty: false,
     ticksSinceSave: 0,
+    idleTicks: 0,
   };
   logger.info("lighthouse match init for world %s", worldId);
   // The label must be JSON so main.ts can find this world again with the
@@ -182,7 +211,11 @@ const matchLeave: nkruntime.MatchLeaveFunction = (ctx, logger, nk, dispatcher, t
   for (let i = 0; i < presences.length; i++) {
     const p = presences[i];
     const held = s.claims[p.sessionId] || [];
-    for (let j = 0; j < held.length; j++) s.presence[held[j]] = false;
+    for (let j = 0; j < held.length; j++) {
+      s.presence[held[j]] = false;
+      // Drop the pose too, or the departed keeper leaves a ghost standing there.
+      delete s.poses[held[j]];
+    }
     delete s.claims[p.sessionId];
     delete s.pending[p.sessionId];
   }
@@ -194,6 +227,19 @@ const matchLeave: nkruntime.MatchLeaveFunction = (ctx, logger, nk, dispatcher, t
 
 const matchLoop: nkruntime.MatchLoopFunction = (ctx, logger, nk, dispatcher, tick, state, messages) => {
   const s = state as MatchState;
+
+  // 0) an empty world eventually closes. Returning null terminates the match;
+  // the next join_world rebuilds it from storage, unchanged.
+  if (anyonePresent(s)) {
+    s.idleTicks = 0;
+  } else {
+    s.idleTicks += 1;
+    if (s.idleTicks >= IDLE_TERMINATE_TICKS) {
+      saveWorld(nk, s.worldId, s.world);
+      logger.info("world %s idle, closing", s.worldId);
+      return null;
+    }
+  }
 
   // 1) advance the tide ONLY when at least one keeper is present (design choice).
   if (anyonePresent(s)) advanceTide(s, dispatcher);
@@ -325,6 +371,31 @@ function handleCommand(
       broadcast(dispatcher, { flags: cdiff });
       break;
     }
+    case OP.POSE: {
+      // Presentation only: validated for OWNERSHIP (you may not puppet the other
+      // keeper) but never against the world. There is nothing here to cheat at —
+      // position buys you nothing a command would grant.
+      const slot = resolveSlot(s, sessionId, data.slot);
+      if (!slot) return;
+      const x = Number(data.x);
+      const y = Number(data.y);
+      if (!isFinite(x) || !isFinite(y)) return;
+      // `t` is the sender's clock, relayed untouched — the server has no opinion
+      // about it and must not restamp it, or the receiver ends up interpolating
+      // against this machine's jitter instead of the sender's motion.
+      const pose: Pose = {
+        x: x, y: y, f: Math.floor(Number(data.f) || 0) & 7, t: Number(data.t) || 0,
+      };
+      s.poses[slot] = pose;
+      // Relayed one for one rather than coalesced per tick. Two 10Hz clocks
+      // (the sender's timer and this loop) beat against each other, so
+      // coalescing quietly drops roughly every seventh sample — which the
+      // receiver then has to cover by moving at double speed.
+      const out: { [slot: string]: Pose } = {};
+      out[slot] = pose;
+      dispatcher.broadcastMessage(OP.POSE_ECHO, JSON.stringify({ poses: out }));
+      break;
+    }
     case OP.LOG_SESSION: {
       // TODO(M6): assemble a keeper's-log entry from this session's diffs and
       // append to a storage-backed log list.
@@ -332,6 +403,7 @@ function handleCommand(
     }
   }
 }
+
 
 // --- tide ---
 

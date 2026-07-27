@@ -37,25 +37,43 @@ const rpcJoinWorld: nkruntime.RpcFunction = function (ctx, logger, nk, payload) 
   return JSON.stringify({ match_id: matchId, world_code: code });
 };
 
-// One world code -> exactly one live match. Three lookups, cheapest first:
-// the remembered id, then the match label index, then create.
+interface WorldIndex {
+  matchId: string | null;
+  version: string | null;   // null when the record does not exist yet
+}
+
+// One world code -> exactly one live match. Three lookups, cheapest first: the
+// remembered id, then the match label index, then create.
+//
+// Two keepers launching together call this in the same millisecond, in separate
+// runtime VMs, and both find nothing. Whoever creates a match second must NOT
+// keep it, or the couple ends up alone in two identical worlds — so the index
+// write is a conditional claim and the loser adopts the winner's match.
 function resolveWorldMatch(nk: nkruntime.Nakama, logger: nkruntime.Logger, code: string): string {
-  const remembered = readWorldIndex(nk, code);
-  if (remembered && matchIsLive(nk, remembered)) return remembered;
+  const index = readWorldIndex(nk, code);
+  if (index.matchId && matchIsLive(nk, index.matchId)) return index.matchId;
 
   // matchList takes EITHER a plain label or a query, never both — passing the
   // module name as `label` while also passing a query matches nothing, which is
   // how you end up with a second live match for a world that already exists.
   const found = nk.matchList(1, true, null, null, null, "+label.world:" + code);
   if (found.length) {
-    writeWorldIndex(nk, code, found[0].matchId);
+    claimWorldIndex(nk, code, found[0].matchId, index.version);
     return found[0].matchId;
   }
 
   const created = nk.matchCreate("lighthouse", { world_id: code });
-  writeWorldIndex(nk, code, created);
-  logger.info("created world %s as match %s", code, created);
-  return created;
+  if (claimWorldIndex(nk, code, created, index.version)) {
+    logger.info("created world %s as match %s", code, created);
+    return created;
+  }
+
+  // Lost the claim. Somebody else's match is the world now; ours was never
+  // joined and idles itself out (see IDLE_TERMINATE_TICKS in match_handler).
+  const winner = readWorldIndex(nk, code);
+  logger.info("world %s was claimed concurrently; joining %s and discarding %s",
+    code, winner.matchId, created);
+  return winner.matchId || created;
 }
 
 function matchIsLive(nk: nkruntime.Nakama, matchId: string): boolean {
@@ -66,19 +84,30 @@ function matchIsLive(nk: nkruntime.Nakama, matchId: string): boolean {
   }
 }
 
-function readWorldIndex(nk: nkruntime.Nakama, code: string): string | null {
+function readWorldIndex(nk: nkruntime.Nakama, code: string): WorldIndex {
   const res = nk.storageRead([{ collection: STORAGE_WORLD_INDEX, key: code, userId: SYSTEM_USER }]);
   if (res.length && res[0].value && (res[0].value as any).match_id) {
-    return String((res[0].value as any).match_id);
+    return { matchId: String((res[0].value as any).match_id), version: res[0].version || null };
   }
-  return null;
+  return { matchId: null, version: null };
 }
 
-function writeWorldIndex(nk: nkruntime.Nakama, code: string, matchId: string): void {
-  nk.storageWrite([{
-    collection: STORAGE_WORLD_INDEX, key: code, userId: SYSTEM_USER,
-    value: { match_id: matchId }, permissionRead: 2, permissionWrite: 0,
-  }]);
+/// Compare-and-swap on the index. `expectedVersion` is the version this caller
+/// read, or null if it saw no record at all — "*" then means "only if it still
+/// does not exist". Returns false when somebody else got there first.
+function claimWorldIndex(
+  nk: nkruntime.Nakama, code: string, matchId: string, expectedVersion: string | null,
+): boolean {
+  try {
+    nk.storageWrite([{
+      collection: STORAGE_WORLD_INDEX, key: code, userId: SYSTEM_USER,
+      value: { match_id: matchId }, version: expectedVersion || "*",
+      permissionRead: 2, permissionWrite: 0,
+    }]);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 // Reference so tsc keeps it.
