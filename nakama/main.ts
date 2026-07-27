@@ -22,6 +22,16 @@ let InitModule: nkruntime.InitModule = function (ctx, logger, nk, initializer) {
   // here fails registration ("javascript functions cannot be inlined").
   initializer.registerRpc("join_world", rpcJoinWorld);
 
+  // Dev-only. A full tide cycle is eight minutes by design, which makes phase
+  // behaviour untestable in any reasonable time, so the local stack can jump the
+  // clock. The guard lives inside the handler rather than around this call: the
+  // runtime resolves handler names by static analysis and cannot see an
+  // identifier nested inside an `if`.
+  initializer.registerRpc("debug_set_tide", rpcDebugSetTide);
+  if (ctx.env["LIGHTHOUSE_DEV"] === "1") {
+    logger.warn("LIGHTHOUSE_DEV=1: debug_set_tide will answer. Never set this in production.");
+  }
+
   logger.info("lighthouse runtime loaded");
 };
 
@@ -35,6 +45,29 @@ const rpcJoinWorld: nkruntime.RpcFunction = function (ctx, logger, nk, payload) 
   }
   const matchId = resolveWorldMatch(nk, logger, code);
   return JSON.stringify({ match_id: matchId, world_code: code });
+};
+
+// rpc debug_set_tide: payload {"world_code":"TEST01","t":0.26} -> {"phase":"MID"}
+// Jumps a world's tide clock so phase behaviour can be tested without waiting
+// out an eight-minute cycle. Refuses outright unless the runtime was explicitly
+// started as a dev server, so a production deploy answers nothing here.
+const rpcDebugSetTide: nkruntime.RpcFunction = function (ctx, logger, nk, payload) {
+  if (ctx.env["LIGHTHOUSE_DEV"] !== "1") {
+    throw Error("debug_set_tide is not enabled on this server");
+  }
+  const req = JSON.parse(payload || "{}");
+  const code: string = String(req.world_code || "").toUpperCase().replace(/\s/g, "");
+  if (!/^[A-Z0-9]{4,8}$/.test(code)) {
+    throw Error("world_code must be 4-8 alphanumerics");
+  }
+  const index = readWorldIndex(nk, code);
+  if (!index.matchId || !matchIsLive(nk, index.matchId)) {
+    throw Error("world " + code + " has no live match");
+  }
+  // The tide lives inside the match, and a match can only be reached from an
+  // RPC by signalling it.
+  const res = nk.matchSignal(index.matchId, JSON.stringify({ op: "set_tide", t: Number(req.t) }));
+  return res;
 };
 
 interface WorldIndex {

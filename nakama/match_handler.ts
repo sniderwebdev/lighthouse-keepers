@@ -22,6 +22,7 @@ const OP = {
   TANDEM: 6,       // co-op gate: { gate_id } — fires when BOTH slots submit in window
   CARRY_ASSIST: 7, // two-person carry: { object_id }
   LOG_SESSION: 8,  // request session log entry assembly
+  CAUGHT: 9,       // { slot, zone } — "the water reached me". Validated, not trusted.
 
   // Not commands. Where a keeper APPEARS to be is presentation, not authoritative
   // shared state (PLAN.md M1): never validated against the world, never persisted,
@@ -52,6 +53,22 @@ const STORAGE_WORLDS = "worlds";
 // — including the ones discarded when two keepers race to create the same world.
 // Generous, because a freshly created match is empty until its creator joins.
 const IDLE_TERMINATE_TICKS = TICK_RATE * 120;   // two minutes
+
+// Which phases each shore zone is walkable in, concentric from the tower
+// (DESIGN.md §2). LOW opens everything; each step in gives one zone back to the
+// sea. This table is authoritative — the client mirrors it to place barriers,
+// but only this copy decides whether a keeper was really caught.
+const ZONE_PHASES: { [zone: string]: string[] } = {
+  sandbar: ["LOW"],
+  mid_beach: ["LOW", "MID"],
+  yard: ["LOW", "MID", "HIGH"],
+  tower: ["LOW", "MID", "HIGH", "STORM"],
+};
+
+// Caught by the water: you wade home wet and walk slow for a bit. You lose
+// nothing — not inventory, not progress, not time you cared about. Cozy, not
+// cruel (DESIGN.md §1, pillar 1).
+const SLOW_WALK_MS = 20000;
 
 interface TideState {
   phase: string;
@@ -88,6 +105,9 @@ interface MatchState {
   // latest presentation pose per slot. Runtime only — poses are never
   // persisted and never enter the world state.
   poses: { [slot: string]: Pose };
+  // slot -> wall-clock ms at which the slow walk ends. Runtime only: being wet
+  // is a thing that is happening, not a thing the world remembers.
+  caught: { [slot: string]: number };
   dirty: boolean;
   ticksSinceSave: number;
   idleTicks: number;
@@ -123,6 +143,7 @@ const matchInit: nkruntime.MatchInitFunction = (ctx, logger, nk, params) => {
     pending: {},
     tandem: {},
     poses: {},
+    caught: {},
     dirty: false,
     ticksSinceSave: 0,
     idleTicks: 0,
@@ -197,6 +218,7 @@ const matchJoin: nkruntime.MatchJoinFunction = (ctx, logger, nk, dispatcher, tic
         inventory: s.world.inventory,
         milestones: s.world.milestones,
         presence: s.presence,
+        caught: remainingCaught(s),
         you: { slots: granted, world: s.worldId },
       }),
       [p],
@@ -215,6 +237,7 @@ const matchLeave: nkruntime.MatchLeaveFunction = (ctx, logger, nk, dispatcher, t
       s.presence[held[j]] = false;
       // Drop the pose too, or the departed keeper leaves a ghost standing there.
       delete s.poses[held[j]];
+      delete s.caught[held[j]];
     }
     delete s.claims[p.sessionId];
     delete s.pending[p.sessionId];
@@ -243,6 +266,9 @@ const matchLoop: nkruntime.MatchLoopFunction = (ctx, logger, nk, dispatcher, tic
 
   // 1) advance the tide ONLY when at least one keeper is present (design choice).
   if (anyonePresent(s)) advanceTide(s, dispatcher);
+
+  // 1b) release anyone who has finished wading home.
+  expireCaught(s, dispatcher);
 
   // 2) process incoming commands authoritatively.
   for (let i = 0; i < messages.length; i++) {
@@ -277,8 +303,33 @@ const matchTerminate: nkruntime.MatchTerminateFunction = (ctx, logger, nk, dispa
   return { state: s };
 };
 
+/// Match signals are the only way into a running match from an RPC. The single
+/// signal understood is the dev tide jump — see rpcDebugSetTide in main.ts,
+/// which is registered only when the runtime is explicitly in dev mode.
 const matchSignal: nkruntime.MatchSignalFunction = (ctx, logger, nk, d, tick, state, data) => {
-  return { state: state, data: data };
+  const s = state as MatchState;
+  let req: any = {};
+  try {
+    req = JSON.parse(data || "{}");
+  } catch (e) {
+    return { state: s, data: JSON.stringify({ ok: false, error: "bad signal payload" }) };
+  }
+  if (req.op !== "set_tide") {
+    return { state: s, data: JSON.stringify({ ok: false, error: "unknown signal" }) };
+  }
+
+  const t = Number(req.t);
+  if (!isFinite(t) || t < 0 || t >= 1) {
+    return { state: s, data: JSON.stringify({ ok: false, error: "t must be 0..1" }) };
+  }
+  s.world.tide.t = t;
+  s.world.tide.phase = PHASES[Math.floor(t * PHASES.length) % PHASES.length];
+  s.dirty = true;
+  broadcast(d, {
+    tide: { phase: s.world.tide.phase, t: t, cycle: s.world.tide.cycle, storm: s.world.tide.storm },
+  });
+  logger.warn("DEV: tide of world %s jumped to t=%f (%s)", s.worldId, t, s.world.tide.phase);
+  return { state: s, data: JSON.stringify({ ok: true, phase: s.world.tide.phase, t: t }) };
 };
 
 // --- command handling (the validation layer) ---
@@ -396,12 +447,61 @@ function handleCommand(
       dispatcher.broadcastMessage(OP.POSE_ECHO, JSON.stringify({ poses: out }));
       break;
     }
+    case OP.CAUGHT: {
+      // The client reports being in a zone the water has taken; the server
+      // decides whether that is true. Positions are presentation and never
+      // authoritative (PLAN.md M1), so the world cannot check WHERE a keeper is
+      // — but it owns the tide, so it can check whether that zone is under water
+      // at all, which is the part that matters. The consequence is entirely the
+      // server's: both clients learn about it the same way, at the same time.
+      const slot = resolveSlot(s, sessionId, data.slot);
+      if (!slot) return;
+      const phases = ZONE_PHASES[String(data.zone || "")];
+      if (!phases) return;
+      if (phases.indexOf(w.tide.phase) >= 0) return;  // dry land; nothing caught anyone
+      const now = Date.now();
+      if (s.caught[slot] && s.caught[slot] > now) return;  // already wading home
+      s.caught[slot] = now + SLOW_WALK_MS;
+      const cdiff: { [k: string]: number } = {};
+      cdiff[slot] = SLOW_WALK_MS;
+      broadcast(dispatcher, { caught: cdiff });
+      logger.info("%s was caught by the water on the %s", slot, data.zone);
+      break;
+    }
     case OP.LOG_SESSION: {
       // TODO(M6): assemble a keeper's-log entry from this session's diffs and
       // append to a storage-backed log list.
       break;
     }
   }
+}
+
+/// Milliseconds of slow walk each caught keeper has left, for the join snapshot.
+/// A keeper arriving mid-wade should see the same thing everyone else does.
+function remainingCaught(s: MatchState): { [k: string]: number } {
+  const now = Date.now();
+  const out: { [k: string]: number } = {};
+  for (const slot in s.caught) {
+    const left = s.caught[slot] - now;
+    if (left > 0) out[slot] = left;
+  }
+  return out;
+}
+
+/// The server, not a client timer, decides when someone has dried off — so both
+/// clients stop the slow walk on the same authoritative message.
+function expireCaught(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
+  const now = Date.now();
+  const released: { [k: string]: number } = {};
+  let any = false;
+  for (const slot in s.caught) {
+    if (s.caught[slot] <= now) {
+      delete s.caught[slot];
+      released[slot] = 0;
+      any = true;
+    }
+  }
+  if (any) broadcast(dispatcher, { caught: released });
 }
 
 
