@@ -1,0 +1,27 @@
+extends Node
+## EventBus — the decoupled nervous system.
+##
+## Local, in-process signals only. Systems emit/listen here instead of holding
+## references to each other. NOTHING here crosses the network — anything that
+## changes shared world state must go through Net.send_command() instead (see net.gd).
+##
+## Rule of thumb:
+##   - "I want to DO something to the shared world"  -> Net.send_command(...)
+##   - "the world told me something CHANGED"         -> WorldState applies it, then
+##                                                       re-emits a local signal here
+##   - "purely cosmetic / UI / audio reaction"       -> emit here directly
+
+# --- World-state echoes (emitted by WorldState after it applies an authoritative diff) ---
+signal tide_changed(phase: String, t: float)
+signal inventory_changed(item_id: String, new_count: int)
+signal flag_changed(flag: String, value: bool)
+signal milestone_changed(milestone_id: String, status: String)
+
+# --- Local gameplay / UI ---
+signal interact_pressed(target: Node)
+signal notification(text: String)            # cozy toast ("A bottle washed ashore")
+signal lamp_lit()                            # the climax — fire confetti, music swell
+
+# --- Net lifecycle (mirrors net.gd state for UI) ---
+signal net_status_changed(status: String)    # "connecting" | "online" | "offline"
+signal keeper_presence_changed(keeper_id: String, present: bool)

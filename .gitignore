@@ -1,0 +1,16 @@
+# Godot
+godot/.godot/
+godot/android/
+*.import
+export_presets.cfg
+
+# Nakama TS runtime
+nakama/node_modules/
+nakama/build/
+nakama/data/
+
+# OS
+.DS_Store
+
+# Local scratch
+*.log

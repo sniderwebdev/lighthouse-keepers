@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "module": "none",
+    "strict": true,
+    "noImplicitAny": true,
+    "outFile": "build/index.js",
+    "typeRoots": ["./node_modules"]
+  },
+  "files": ["main.ts", "match_handler.ts"]
+}

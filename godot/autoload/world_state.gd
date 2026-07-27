@@ -1,0 +1,58 @@
+extends Node
+## WorldState — the client-side mirror of the authoritative world.
+##
+## The server (Nakama match) is the source of truth. This singleton holds the
+## last-known authoritative snapshot, applies diffs as they arrive, and re-emits
+## tidy local signals on EventBus so the rest of the game never has to know the
+## network exists. Read from here; never write here directly.
+
+# Mirror of the schema in DESIGN.md §8 / match_handler.ts.
+var tide := { "phase": "LOW", "t": 0.0, "cycle": 0, "storm": false }
+var flags: Dictionary = {}        # flag -> bool
+var inventory: Dictionary = {}    # item_id -> int
+var milestones: Dictionary = {}   # milestone_id -> "todo"|"in_progress"|"done"
+var presence: Dictionary = {}     # keeper_id -> bool
+
+## Called by Net when an authoritative diff arrives. A diff may contain any
+## subset of keys; we apply only what's present and emit granular signals.
+func apply_diff(diff: Dictionary) -> void:
+	if diff.has("tide"):
+		var old_phase: String = tide.get("phase", "")
+		tide.merge(diff["tide"], true)
+		if tide.get("phase", "") != old_phase:
+			EventBus.tide_changed.emit(tide["phase"], tide.get("t", 0.0))
+
+	if diff.has("inventory"):
+		for item_id in diff["inventory"]:
+			inventory[item_id] = diff["inventory"][item_id]
+			EventBus.inventory_changed.emit(item_id, inventory[item_id])
+
+	if diff.has("flags"):
+		for f in diff["flags"]:
+			flags[f] = diff["flags"][f]
+			EventBus.flag_changed.emit(f, flags[f])
+			if f == "lamp_lit" and flags[f] == true:
+				EventBus.lamp_lit.emit()   # the climax
+
+	if diff.has("milestones"):
+		for m in diff["milestones"]:
+			milestones[m] = diff["milestones"][m]
+			EventBus.milestone_changed.emit(m, milestones[m])
+
+	if diff.has("presence"):
+		for k in diff["presence"]:
+			presence[k] = diff["presence"][k]
+			EventBus.keeper_presence_changed.emit(k, presence[k])
+
+# --- read helpers ---
+func has_flag(flag: String) -> bool:
+	return flags.get(flag, false) == true
+
+func count(item_id: String) -> int:
+	return int(inventory.get(item_id, 0))
+
+func can_afford(costs: Dictionary) -> bool:
+	for item_id in costs:
+		if count(item_id) < int(costs[item_id]):
+			return false
+	return true
