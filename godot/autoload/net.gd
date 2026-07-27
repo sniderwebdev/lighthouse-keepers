@@ -7,9 +7,7 @@ extends Node
 ##   - SEND commands (intents) up to the match
 ##   - RECEIVE authoritative state diffs and hand them to WorldState
 ##
-## Opcodes for *outgoing* commands live in Command (game/command.gd).
-## One reserved *incoming* opcode carries the authoritative state diff:
-const OP_STATE_DIFF := 100   # server -> client: { changes... }  (mirror in match_handler.ts)
+## Every opcode lives in Command (game/command.gd), mirrored in match_handler.ts.
 
 ## Keeper slot claims a connection can request. "both" is couch play: one
 ## machine, two pads, one connection driving both keepers.
@@ -36,6 +34,10 @@ var last_error := ""
 var world_code := ""             ## the human code this connection joined
 var match_id := ""
 var claimed_slots: PackedStringArray = []   ## authoritative — the server confirms these
+var _claim_confirmed := false
+
+## How long to wait for the match to confirm the slot claim after joining.
+const CLAIM_TIMEOUT := 5.0
 
 func _ready() -> void:
 	_set_status("offline")
@@ -71,6 +73,7 @@ func connect_and_join(p_world_code: String, slots: String = SLOTS_A) -> bool:
 	world_code = p_world_code.to_upper().strip_edges()
 	last_error = ""
 	claimed_slots = []
+	_claim_confirmed = false
 	_set_status("connecting")
 
 	var scheme := "https" if use_ssl else "http"
@@ -107,8 +110,23 @@ func connect_and_join(p_world_code: String, slots: String = SLOTS_A) -> bool:
 	if _match.is_exception():
 		return _fail("join refused: %s" % _match.get_exception().message)
 
+	# A successful join is not a granted claim. The match confirms slots in the
+	# snapshot that follows, on a separate message — returning before it lands
+	# leaves callers believing they drive nobody, which silently turns couch mode
+	# into two mirrors and nothing to move.
+	if not await _await_claim():
+		return _fail("the match never confirmed a slot claim")
+	if claimed_slots.is_empty():
+		return _fail("the match granted no keeper slot")
+
 	_set_status("online")
 	return true
+
+func _await_claim() -> bool:
+	var deadline := Time.get_ticks_msec() + int(CLAIM_TIMEOUT * 1000.0)
+	while not _claim_confirmed and Time.get_ticks_msec() < deadline:
+		await get_tree().process_frame
+	return _claim_confirmed
 
 func disconnect_from_world() -> void:
 	if _socket != null and _socket.is_connected_to_host():
@@ -129,14 +147,49 @@ func send_command(cmd: Dictionary) -> void:
 	var payload := JSON.stringify(cmd.get("data", {}))
 	_socket.send_match_state_async(match_id, op, payload)
 
+## Where a keeper appears to be. Not a command: no validation, no persistence, no
+## WorldState. Dropped silently when offline — a lost pose is a stale frame, and
+## the next one is 100ms away.
+func send_pose(slot: String, pos: Vector2, facing: int) -> void:
+	if status != "online":
+		return
+	var cmd := Command.pose(slot, pos, facing)
+	_socket.send_match_state_async(match_id, int(cmd["op"]), JSON.stringify(cmd["data"]))
+
 # --- incoming ---
+
+func _on_match_state(state: NakamaRTAPI.MatchData) -> void:
+	match state.op_code:
+		Command.OP_STATE_DIFF:
+			_apply_state_diff(state.data)
+		Command.OP_POSE_ECHO:
+			_apply_pose_echo(state.data)
+
+## Presentation channel. Straight to EventBus — deliberately NOT through
+## WorldState, which mirrors what the world is, not where people look like they
+## are standing.
+func _apply_pose_echo(raw: String) -> void:
+	var parsed: Variant = JSON.parse_string(raw)
+	if typeof(parsed) != TYPE_DICTIONARY:
+		return
+	var poses: Dictionary = (parsed as Dictionary).get("poses", {})
+	for slot in poses:
+		# A client that drives this slot already knows where it is, and its own
+		# echo is ~100ms stale — applying it would drag the keeper backwards.
+		if has_slot(slot):
+			continue
+		var p: Dictionary = poses[slot]
+		EventBus.keeper_pose_received.emit(
+			String(slot),
+			Vector2(float(p.get("x", 0.0)), float(p.get("y", 0.0))),
+			int(p.get("f", 0)),
+			float(p.get("t", 0.0)) / 1000.0,
+		)
 
 ## Authoritative state diff arrived. We do NOT trust local prediction here for
 ## v1 — just apply what the server says. (Add prediction later if needed.)
-func _on_match_state(state: NakamaRTAPI.MatchData) -> void:
-	if state.op_code != OP_STATE_DIFF:
-		return
-	var parsed: Variant = JSON.parse_string(state.data)
+func _apply_state_diff(raw: String) -> void:
+	var parsed: Variant = JSON.parse_string(raw)
 	if typeof(parsed) != TYPE_DICTIONARY:
 		push_warning("Net: undecodable state diff")
 		return
@@ -147,6 +200,7 @@ func _on_match_state(state: NakamaRTAPI.MatchData) -> void:
 	if diff.has("you"):
 		var you: Dictionary = diff["you"]
 		claimed_slots = PackedStringArray(you.get("slots", []))
+		_claim_confirmed = true
 		EventBus.net_slots_claimed.emit(claimed_slots)
 		diff.erase("you")
 
@@ -162,6 +216,7 @@ func _on_presence(event: NakamaRTAPI.MatchPresenceEvent) -> void:
 
 func _on_socket_closed() -> void:
 	claimed_slots = []
+	_claim_confirmed = false
 	if status != "error":
 		_set_status("offline")
 

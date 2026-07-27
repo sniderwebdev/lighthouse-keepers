@@ -1,5 +1,7 @@
-extends Control
-## M0 debug scene — the whole pipe, made visible.
+extends Node
+## Session bootstrap + debug readout.
+##
+## Owns the connection, then hosts the world under itself once the join lands.
 ##
 ## Shows connection status, the keeper slot(s) this connection claimed, and the
 ## authoritative tide. Everything here is read-only observation of WorldState;
@@ -18,6 +20,7 @@ extends Control
 
 const DEFAULT_WORLD := "TEST01"
 const HEARTBEAT_SECONDS := 2.0
+const WORLD_SCENE := preload("res://scenes/world.tscn")
 
 @onready var _status_label: Label = %StatusLabel
 @onready var _slots_label: Label = %SlotsLabel
@@ -31,6 +34,8 @@ var _slots := Net.SLOTS_A
 var _connecting := false
 var _heartbeat := 0.0
 var _shot_path := ""
+var _autowalk := false
+var _world: Node2D = null
 
 func _ready() -> void:
 	_parse_flags()
@@ -40,7 +45,7 @@ func _ready() -> void:
 	EventBus.keeper_presence_changed.connect(_on_presence_changed)
 
 	_world_label.text = "world:    %s" % _world_code
-	_hint_label.text = "requesting: %s" % _slots
+	_hint_label.text = "requesting: %s  ·  menu_pause hides this readout" % _slots
 	_log("boot: world=%s slots=%s host=%s:%d" % [_world_code, _slots, Net.host, Net.port])
 	if _shot_path != "":
 		_grab_screenshot.call_deferred()
@@ -75,6 +80,8 @@ func _parse_flags() -> void:
 			Net.log_level = NakamaLogger.LOG_LEVEL.DEBUG
 		elif arg.begins_with("--shot="):
 			_shot_path = arg.split("=", true, 1)[1]
+		elif arg == "--autowalk":
+			_autowalk = true
 
 func _normalize_slot(raw: String) -> String:
 	match raw.to_lower():
@@ -92,6 +99,23 @@ func _join() -> void:
 	var joined: bool = await Net.connect_and_join(_world_code, _slots)
 	_connecting = false
 	_log("join %s" % ("ok" if joined else "FAILED: " + Net.last_error))
+	if joined:
+		_enter_world()
+
+## The world is hosted UNDER boot rather than swapping scenes, so the debug
+## readout and its stdout heartbeat survive into play — that heartbeat is how the
+## milestone verifiers see what a headless client is doing.
+func _enter_world() -> void:
+	if _world != null:
+		return
+	_world = WORLD_SCENE.instantiate()
+	%WorldHost.add_child(_world)
+	if _autowalk:
+		var walker := preload("res://tools/autowalk.gd").new()
+		walker.name = "AutoWalk"
+		add_child(walker)
+		_log("autowalk engaged (debug input synthesis)")
+	_log("world entered (%s)" % ("couch" if Net.is_couch() else "online"))
 
 func _process(delta: float) -> void:
 	# WorldState is a read-only mirror; reading it every frame is the intended use.
@@ -108,8 +132,10 @@ func _process(delta: float) -> void:
 		])
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Controller-first: one button, no cursor. Retry a failed/dropped connection.
-	if event.is_action_pressed("interact") or event.is_action_pressed("p2_interact"):
+	# Controller-first: buttons only, no cursor anywhere in this path.
+	if event.is_action_pressed("menu_pause") or event.is_action_pressed("p2_menu_pause"):
+		%DebugLayer.visible = not %DebugLayer.visible
+	elif event.is_action_pressed("interact") or event.is_action_pressed("p2_interact"):
 		if Net.status == "offline" or Net.status == "error":
 			_log("retry requested")
 			await _join()
@@ -123,7 +149,7 @@ func _on_status_changed(status: String) -> void:
 func _on_slots_claimed(slots: PackedStringArray) -> void:
 	var mode := "couch (both pads)" if slots.size() == 2 else "online"
 	_slots_label.text = "claimed:  %s  [%s]" % [", ".join(slots), mode]
-	_hint_label.text = "press interact to rejoin if dropped"
+	_hint_label.text = "move: stick or d-pad  ·  menu_pause hides this readout"
 	_log("claimed slots %s (%s)" % [", ".join(slots), mode])
 
 func _on_net_error(message: String) -> void:

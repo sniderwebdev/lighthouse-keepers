@@ -19,6 +19,18 @@ enum Op {
 	LOG_SESSION  = 8,   # { }  -> server assembles keeper's log entry
 }
 
+## Non-command opcodes. These are not intents and the server does not validate,
+## apply, or persist them — they are kept here so the whole opcode registry lives
+## in one file, mirrored in match_handler.ts.
+##
+## POSE is the presentation channel: where a keeper *appears* to be. Positions
+## are cosmetic mirroring, not authoritative shared state (PLAN.md M1), so they
+## deliberately bypass WorldState. If you ever need a position the world can be
+## held to — a milestone, a gate, a spawn — that is a Command, not a pose.
+const OP_POSE := 20        # client -> server: { "slot", "x", "y", "f", "t" }
+const OP_POSE_ECHO := 120  # server -> clients: { "poses": { slot: {x,y,f,t} } }
+const OP_STATE_DIFF := 100 # server -> clients: the authoritative diff
+
 ## Keeper slots. In couch mode one client drives both; every slot-sensitive
 ## command carries which keeper acted. In online mode the server can derive it,
 ## but sending it explicitly keeps both modes identical.
@@ -50,3 +62,16 @@ static func carry_assist(object_id: String, slot: String) -> Dictionary:
 
 static func log_session() -> Dictionary:
 	return make(Op.LOG_SESSION, {})
+
+## Presentation, not a command — see OP_POSE. Sent on its own opcode so it can
+## never be mistaken for something the world is held to.
+##
+## `t` is the SENDER's millisecond clock, relayed untouched. The receiver only
+## ever takes differences within one sender's stream, so the offset between the
+## two machines' clocks cancels out and nothing has to be synchronised. Without
+## it the receiver would have to time samples by arrival, which measures the
+## network's jitter rather than the keeper's movement.
+static func pose(slot: String, pos: Vector2, facing: int) -> Dictionary:
+	return { "op": OP_POSE, "data": {
+		"slot": slot, "x": pos.x, "y": pos.y, "f": facing, "t": Time.get_ticks_msec(),
+	} }

@@ -27,3 +27,8 @@ signal net_status_changed(status: String)    # "connecting" | "online" | "offlin
 signal net_error(message: String)            # join refused, auth failed, socket dropped
 signal net_slots_claimed(slots: PackedStringArray)  # which keeper slot(s) THIS client drives
 signal keeper_presence_changed(keeper_id: String, present: bool)  # keeper_id = slot
+
+## Presentation only — where the OTHER keeper appears to be, at ~10Hz. Never
+## authoritative; see Command.OP_POSE. `sent_at` is the sender's clock in
+## seconds, meaningful only as a difference against that same sender.
+signal keeper_pose_received(slot: String, pos: Vector2, facing: int, sent_at: float)
