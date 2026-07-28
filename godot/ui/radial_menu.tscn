@@ -1,0 +1,160 @@
+[gd_scene load_steps=4 format=3 uid="uid://blighthousekeeperradial"]
+
+[ext_resource type="Script" path="res://ui/radial_menu.gd" id="1_radial"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.164706, 0.145098, 0.203922, 0.933333)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hint"]
+bg_color = Color(0.141176, 0.113725, 0.278431, 0.941176)
+
+[node name="RadialMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_radial")
+
+[node name="Dim" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.121569, 0.105882, 0.160784, 0.717647)
+
+[node name="HeaderLeft" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 32.0
+offset_top = 16.0
+offset_right = 400.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(0.949020, 0.756863, 0.305882, 1)
+theme_override_font_sizes/font_size = 8
+text = "CRAFTING"
+
+[node name="HeaderRight" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 380.0
+offset_top = 16.0
+offset_right = 608.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 2
+
+[node name="Wheel" type="Control" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Centre" type="Label" parent="Wheel"]
+offset_left = 292.0
+offset_top = 124.0
+offset_right = 348.0
+offset_bottom = 140.0
+theme_override_colors/font_color = Color(0.509804, 0.333333, 0.541176, 1)
+theme_override_font_sizes/font_size = 8
+text = "aim"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Panel" type="PanelContainer" parent="."]
+offset_left = 40.0
+offset_top = 206.0
+offset_right = 600.0
+offset_bottom = 286.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Pad" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
+
+[node name="Rows" type="VBoxContainer" parent="Panel/Pad"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 3
+
+[node name="TitleRow" type="HBoxContainer" parent="Panel/Pad/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="RecipeTitle" type="Label" parent="Panel/Pad/Rows/TitleRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1.000000, 0.850980, 0.478431, 1)
+theme_override_font_sizes/font_size = 8
+text = "—"
+
+[node name="BatchLabel" type="Label" parent="Panel/Pad/Rows/TitleRow"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.670588, 0.415686, 0.521569, 1)
+theme_override_font_sizes/font_size = 8
+
+[node name="RecipeDesc" type="Label" parent="Panel/Pad/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
+theme_override_font_sizes/font_size = 8
+autowrap_mode = 2
+
+[node name="CostsRow" type="HBoxContainer" parent="Panel/Pad/Rows"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="CostsLabel" type="Label" parent="Panel/Pad/Rows/CostsRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.509804, 0.333333, 0.541176, 1)
+theme_override_font_sizes/font_size = 8
+text = "COSTS"
+
+[node name="Costs" type="HBoxContainer" parent="Panel/Pad/Rows/CostsRow"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Shortfall" type="Label" parent="Panel/Pad/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.756863, 0.290196, 0.239216, 1)
+theme_override_font_sizes/font_size = 8
+
+[node name="HintBar" type="PanelContainer" parent="."]
+offset_left = 32.0
+offset_top = 300.0
+offset_right = 608.0
+offset_bottom = 320.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_hint")
+
+[node name="Hint" type="Label" parent="HintBar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+vertical_alignment = 1

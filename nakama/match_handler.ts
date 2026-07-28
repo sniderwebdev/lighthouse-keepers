@@ -147,11 +147,35 @@ interface Pose {
   t: number;  // SENDER's clock in ms, relayed untouched
 }
 
-// Server-side recipe/cost tables. (Mirror of the .tres content; the SERVER copy
-// is authoritative. Load from a storage object or bundle at deploy.)
-const RECIPES: { [id: string]: { inputs: { [k: string]: number }; out: string; n: number } } = {
-  patch_kit: { inputs: { driftwood: 3, kelp: 1 }, out: "patch_kit", n: 1 },
-  // ...author the rest here / load from storage
+// Server-side recipe table. Mirror of the .tres content under
+// godot/content/recipes/ — the SERVER copy is authoritative and the client's is
+// only there to draw the wheel and grey out what it already knows will be
+// refused. Values are PLAN.md's, verbatim.
+//
+// `chowder` has no costs anywhere in PLAN or DESIGN, so it ships locked behind a
+// TODO_CONTENT flag rather than with numbers nobody chose. It will not craft:
+// the input it asks for does not exist, which is the honest state of a recipe
+// whose recipe has not been written yet.
+interface RecipeDef {
+  inputs: { [k: string]: number };
+  out: string;
+  n: number;
+  station: string;      // "" = anywhere
+  unlock_flag: string;  // "" = known from the start
+}
+const RECIPES: { [id: string]: RecipeDef } = {
+  patch_kit: {
+    inputs: { driftwood: 3, kelp: 1 }, out: "patch_kit", n: 1,
+    station: "workbench", unlock_flag: "",
+  },
+  lamp_oil: {
+    inputs: { kelp: 2, fish_stub: 1 }, out: "lamp_oil", n: 1,
+    station: "workbench", unlock_flag: "",
+  },
+  chowder: {
+    inputs: { TODO_CONTENT: 1 }, out: "chowder", n: 1,
+    station: "stove", unlock_flag: "TODO_CONTENT_chowder_unlock",
+  },
 };
 const MILESTONE_COST: { [id: string]: { [k: string]: number } } = {
   fix_stairs: { driftwood: 5 },
@@ -396,14 +420,25 @@ function handleCommand(
       break;
     }
     case OP.CRAFT: {
-      const r = RECIPES[data.recipe_id];
-      if (!r || !afford(w, r.inputs)) return;            // silent reject = cozy
+      const r = RECIPES[String(data.recipe_id || "")];
+      if (!r) return;                                       // silent reject = cozy
+      // You must be at the right bench. The client only offers what the station
+      // makes, but the client is not what decides.
+      if (r.station !== "" && r.station !== String(data.station || "")) return;
+      if (r.unlock_flag !== "" && !w.flags[r.unlock_flag]) return;
+      if (!afford(w, r.inputs)) return;
+
+      // Inputs and output move together, in one pass, announced in ONE diff.
+      // A client can never observe a frame where the driftwood is gone and the
+      // patch kit has not arrived.
       for (const k in r.inputs) grant(s, k, -r.inputs[k]);
       grant(s, r.out, r.n);
       const touchedCraft: { [k: string]: number } = {};
       for (const k in r.inputs) touchedCraft[k] = 0;
       touchedCraft[r.out] = 0;
+      s.dirty = true;
       broadcast(dispatcher, { inventory: changedInv(w, touchedCraft) });
+      logger.info("crafted %s at the %s", data.recipe_id, r.station || "hands");
       break;
     }
     case OP.ADVANCE_STEP: {

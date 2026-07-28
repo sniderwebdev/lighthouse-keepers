@@ -18,6 +18,11 @@ signal tide_changed(phase: String, t: float)
 ## listening only for phase changes leaves it free-running for minutes at a time.
 signal tide_progressed(phase: String, t: float, cycle: int)
 signal inventory_changed(item_id: String, new_count: int)
+## One authoritative diff's worth of inventory change, together. A craft spends
+## and grants in a single message, and anything that wants to react to THAT —
+## an animation, a sound, a test asserting nothing was ever half-done — needs the
+## batch rather than three unrelated-looking events.
+signal inventory_batch_applied(changed: Dictionary)
 signal flag_changed(flag: String, value: bool)
 signal milestone_changed(milestone_id: String, status: String)
 ## A resource node emptied (false) or the sea restocked it (true).
@@ -30,6 +35,10 @@ signal keeper_released(slot: String)
 
 # --- Local gameplay / UI ---
 signal interact_pressed(target: Node)
+## A keeper held interact at a bench. Carries the pad prefix, because the wheel
+## is aimed with the same stick that opened it.
+signal station_wheel_requested(station: Station, slot: String, input_prefix: String)
+
 ## A menu took the screen. Keepers stop reading their pads while this is true, so
 ## choosing something never also walks you into the sea.
 signal ui_modal_changed(open: bool)

@@ -34,8 +34,19 @@ func apply_diff(diff: Dictionary) -> void:
 			EventBus.tide_changed.emit(tide["phase"], tide.get("t", 0.0))
 
 	if diff.has("inventory"):
+		# Apply the WHOLE diff before telling anyone about any of it. A craft
+		# arrives as one message carrying both the spend and the gain; emitting as
+		# we went would let a listener read a basket that had paid for a patch kit
+		# it had not been handed yet.
+		var touched: Array = []
 		for item_id in diff["inventory"]:
 			inventory[item_id] = diff["inventory"][item_id]
+			touched.append(item_id)
+		var batch: Dictionary = {}
+		for item_id in touched:
+			batch[item_id] = inventory[item_id]
+		EventBus.inventory_batch_applied.emit(batch)
+		for item_id in touched:
 			EventBus.inventory_changed.emit(item_id, inventory[item_id])
 
 	if diff.has("flags"):

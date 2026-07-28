@@ -26,8 +26,13 @@ func verb() -> String:
 
 ## Do the thing. Whatever this is, it is an INTENT: it sends a Command and waits
 ## for the world to confirm. Nothing here may touch shared state directly.
-func interact(_slot: String) -> void:
+func interact(_keeper: Keeper) -> void:
 	pass
+
+## True when this wants the button held rather than tapped. A wheel is a gesture
+## — hold, aim, release — so it cannot share a tap with "pick up the driftwood".
+func requires_hold() -> bool:
+	return false
 
 func prompt_position() -> Vector2:
 	return global_position + prompt_offset

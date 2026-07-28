@@ -59,6 +59,8 @@ const FRAME_UP := 2
 var facing: int = 6          ## 8-dir index; see _facing_from()
 var is_soaked := false
 var _ui_blocked := false
+var _hold_timer := 0.0
+var _hold_fired := false
 var _fade: Tween
 var _pose_timer := 0.0
 var _last_sent := Vector2.INF
@@ -122,14 +124,34 @@ func _drive(delta: float) -> void:
 		_pose_timer = 0.0
 		_publish_pose()
 
-	# One context-sensitive button. What it does is whatever the prompt says it
-	# will do, which is whatever the interactor picked from where you are standing
-	# and which way you are looking.
-	if not _ui_blocked and Input.is_action_just_pressed(input_prefix + "interact"):
-		var reachable := _interactor.target
-		if reachable != null and reachable.can_interact():
-			reachable.interact(slot)
+	_read_interact(delta)
 	_place_prompt()
+
+## One context-sensitive button. What it does is whatever the prompt says it will
+## do, which is whatever the interactor picked from where you are standing and
+## which way you are looking. Some things want a tap, some want a hold.
+func _read_interact(delta: float) -> void:
+	var reachable := _interactor.target
+	if _ui_blocked or reachable == null or not reachable.can_interact():
+		_hold_timer = 0.0
+		_hold_fired = false
+		return
+
+	var action := input_prefix + "interact"
+	if not reachable.requires_hold():
+		if Input.is_action_just_pressed(action):
+			reachable.interact(self)
+		return
+
+	if Input.is_action_pressed(action):
+		if not _hold_fired:
+			_hold_timer += delta
+			if _hold_timer >= Station.HOLD_SECONDS:
+				_hold_fired = true
+				reachable.interact(self)
+	else:
+		_hold_timer = 0.0
+		_hold_fired = false
 
 func _publish_pose() -> void:
 	# Standing still costs nothing to say once, then nothing at all.

@@ -1,10 +1,11 @@
-[gd_scene load_steps=13 format=3 uid="uid://blighthousekeeperbeach"]
+[gd_scene load_steps=14 format=3 uid="uid://blighthousekeeperbeach"]
 
 [ext_resource type="Script" path="res://scenes/beach.gd" id="1_beach"]
 [ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
 [ext_resource type="Script" path="res://game/tide_clock.gd" id="3_tide"]
 [ext_resource type="Script" path="res://game/shore_zone.gd" id="4_zone"]
 [ext_resource type="PackedScene" path="res://game/resource_node.tscn" id="5_resource"]
+[ext_resource type="PackedScene" path="res://game/station.tscn" id="6_station"]
 
 [sub_resource type="RectangleShape2D" id="Shape_wall_h"]
 size = Vector2(1280, 16)
@@ -257,6 +258,16 @@ item_id = "glass_shard"
 position = Vector2(820, 280)
 node_id = "driftwood_04"
 item_id = "driftwood"
+
+[node name="workbench" parent="Actors" instance=ExtResource("6_station")]
+position = Vector2(860, 480)
+station_id = "workbench"
+display_name = "the bench"
+
+[node name="stove" parent="Actors" instance=ExtResource("6_station")]
+position = Vector2(1020, 480)
+station_id = "stove"
+display_name = "the stove"
 
 [node name="Camera" type="Camera2D" parent="."]
 unique_name_in_owner = true

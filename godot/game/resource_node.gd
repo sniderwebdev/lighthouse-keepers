@@ -25,7 +25,7 @@ func can_interact() -> bool:
 func verb() -> String:
 	return "Gather %s" % ItemRegistry.display_name(item_id)
 
-func interact(_slot: String) -> void:
+func interact(_keeper: Keeper) -> void:
 	# An intent, not a change. The pile stays exactly as it looks until the world
 	# confirms it is gone — no local prediction, so the two keepers can never
 	# disagree about whether it was taken.

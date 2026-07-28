@@ -19,6 +19,10 @@ func _init() -> void:
 	_save(_kelp(), "kelp.png")
 	_save(_brass_scrap(), "brass_scrap.png")
 	_save(_glass_shard(), "glass_shard.png")
+	_save(_fish_stub(), "fish_stub.png")
+	_save(_patch_kit(), "patch_kit.png")
+	_save(_lamp_oil(), "lamp_oil.png")
+	_save(_chowder(), "chowder.png")
 	quit(0)
 
 func _save(img: Image, filename: String) -> void:
@@ -69,6 +73,53 @@ func _glass_shard() -> Image:
 		_rect(img, 5 - int(row * 0.5), 2 + row, 2 + row, 1, "#35707c")
 	_rect(img, 4, 4, 2, 3, "#3f818b")
 	_px(img, 5, 3, "#d8ecdf")
+	_outline(img)
+	return img
+
+## A small fish, off the sea ramp. Food and salvage are both scenery; the warm
+## ramps stay reserved.
+func _fish_stub() -> Image:
+	var img := _blank()
+	_rect(img, 2, 4, 6, 4, "#35707c")
+	_rect(img, 3, 5, 4, 2, "#3f818b")
+	_rect(img, 8, 3, 2, 6, "#2c5d6b")   # tail
+	_px(img, 9, 2, "#2c5d6b")
+	_px(img, 9, 9, "#2c5d6b")
+	_px(img, 3, 5, "#d8ecdf")           # eye glint
+	_outline(img)
+	return img
+
+## A bundle of cloth and twine — a made thing, so neutrals.
+func _patch_kit() -> Image:
+	var img := _blank()
+	_rect(img, 2, 3, 8, 6, "#ece2d0")
+	_rect(img, 2, 3, 8, 2, "#4d4560")
+	_rect(img, 5, 3, 2, 6, "#565070")   # twine across
+	_rect(img, 2, 6, 8, 1, "#565070")
+	_outline(img)
+	return img
+
+## Fuel for a light, so warm is exactly what it is for (DESIGN §6): the mock
+## draws it the same way.
+func _lamp_oil() -> Image:
+	var img := _blank()
+	_rect(img, 4, 1, 4, 2, "#453c4a")   # stopper
+	_rect(img, 3, 3, 6, 8, "#f2c14e")
+	_rect(img, 4, 4, 2, 6, "#ffd97a")   # lit side
+	_rect(img, 3, 9, 6, 2, "#f6c752")
+	_px(img, 5, 5, "#fff3c4")
+	_outline(img)
+	return img
+
+## Hot food is warmth and safety, which the warm ramps are also for. The bowl
+## itself stays neutral so only what is IN it reads warm.
+func _chowder() -> Image:
+	var img := _blank()
+	_rect(img, 2, 5, 8, 5, "#ece2d0")
+	_rect(img, 3, 5, 6, 2, "#ffd97a")   # the chowder
+	_px(img, 5, 4, "#fff3c4")           # steam
+	_px(img, 7, 3, "#fff3c4")
+	_rect(img, 2, 9, 8, 1, "#4d4560")
 	_outline(img)
 	return img
 

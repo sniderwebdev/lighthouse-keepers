@@ -16,6 +16,12 @@ HOST="http://127.0.0.1:7350"
 mkdir -p "$OUT"
 rm -f "$OUT"/*.log "$OUT"/*.csv
 
+# Worlds PERSIST. Reusing a fixed code would let one run's leftovers — a taken
+# node, a stocked basket — decide the next run's result, and an assertion like
+# "the basket holds exactly 3" would start passing for the wrong reason. Each run
+# gets its own world.
+TAG=$(date +%s | tail -c 5)
+
 pass=0
 fail=0
 check() {
@@ -51,10 +57,10 @@ echo "AC1 — keeper A gathers 3 driftwood; keeper B's inventory shows"
 echo "      +3 within 500ms, in BOTH play modes"
 echo "=============================================================="
 echo "  -- online --"
-launch m3_on_a --slot=keeper_a --world=GATHON --autowalk=gather_once >/dev/null
-launch m3_on_b --slot=keeper_b --world=GATHON >/dev/null
+launch m3_on_a --slot=keeper_a --world=GON$TAG --autowalk=gather_once >/dev/null
+launch m3_on_b --slot=keeper_b --world=GON$TAG >/dev/null
 sleep 3
-set_tide GATHON 0.0 >/dev/null      # LOW, so the sandbar is walkable
+set_tide GON$TAG 0.0 >/dev/null      # LOW, so the sandbar is walkable
 sleep 18
 kill_all
 
@@ -79,9 +85,9 @@ awk "BEGIN{exit !($SKEW <= 0.5)}"
 check "the other keeper saw it within 500ms" $? "${SKEW}s between the two clients recording driftwood=3"
 
 echo "  -- couch --"
-launch m3_couch --couch --world=GATHCH --autowalk=gather_once >/dev/null
+launch m3_couch --couch --world=GCH$TAG --autowalk=gather_once >/dev/null
 sleep 3
-set_tide GATHCH 0.0 >/dev/null
+set_tide GCH$TAG 0.0 >/dev/null
 sleep 18
 kill_all
 C_INV=$(grep -oE "inventory driftwood=[0-9]+" "$OUT/m3_couch.log" | tail -1)
@@ -93,16 +99,16 @@ echo "=============================================================="
 echo "AC2 — a depleted node visibly empties on both clients and"
 echo "      respawns after the configured number of cycles"
 echo "=============================================================="
-launch m3_node_a --slot=keeper_a --world=NODES1 --autowalk=gather_once >/dev/null
-launch m3_node_b --slot=keeper_b --world=NODES1 >/dev/null
+launch m3_node_a --slot=keeper_a --world=NOD$TAG --autowalk=gather_once >/dev/null
+launch m3_node_b --slot=keeper_b --world=NOD$TAG >/dev/null
 sleep 3
-set_tide NODES1 0.0 0 >/dev/null
+set_tide NOD$TAG 0.0 0 >/dev/null
 sleep 18
 A_EMPTY=$(grep -oE "\[node\] driftwood_01 visible=false" "$OUT/m3_node_a.log" | tail -1)
 B_EMPTY=$(grep -oE "\[node\] driftwood_01 visible=false" "$OUT/m3_node_b.log" | tail -1)
 
 # driftwood_01 comes back after ONE cycle, so one cycle is what it gets.
-set_tide NODES1 0.0 1 >/dev/null
+set_tide NOD$TAG 0.0 1 >/dev/null
 sleep 5
 A_BACK=$(grep -oE "\[node\] driftwood_01 visible=true" "$OUT/m3_node_a.log" | tail -1)
 B_BACK=$(grep -oE "\[node\] driftwood_01 visible=true" "$OUT/m3_node_b.log" | tail -1)
@@ -124,9 +130,9 @@ echo
 echo "=============================================================="
 echo "AC3 — spamming interact does not double-grant"
 echo "=============================================================="
-launch m3_spam --slot=keeper_a --world=SPAM01 --autowalk=gather_spam >/dev/null
+launch m3_spam --slot=keeper_a --world=SPM$TAG --autowalk=gather_spam >/dev/null
 sleep 3
-set_tide SPAM01 0.0 >/dev/null
+set_tide SPM$TAG 0.0 >/dev/null
 sleep 20
 kill_all
 
@@ -145,7 +151,7 @@ echo "=============================================================="
 echo "AC4 — inventory fully navigable by d-pad; focus visible;"
 echo "      cancel closes"
 echo "=============================================================="
-launch m3_ui --slot=keeper_a --world=UIM3 \
+launch m3_ui --slot=keeper_a --world=UIM$TAG \
   --debug-gather=driftwood_01,kelp_01,brass_scrap_01,glass_shard_01 --ui-selftest >/dev/null
 sleep 16
 kill_all

@@ -50,6 +50,7 @@ var _autowalk := false
 var _autowalk_route := "tour"
 var _debug_gather: PackedStringArray = []
 var _ui_selftest := false
+var _debug_visible := true
 var _scene := DEFAULT_SCENE
 var _world: Node2D = null
 
@@ -60,6 +61,10 @@ func _ready() -> void:
 	EventBus.net_error.connect(_on_net_error)
 	EventBus.keeper_presence_changed.connect(_on_presence_changed)
 	EventBus.inventory_changed.connect(_on_inventory_changed)
+	EventBus.inventory_batch_applied.connect(_on_inventory_batch)
+	# Dev furniture gets out of the way of real UI rather than sitting on top of
+	# it — the readout is a lens on the world, not part of the game.
+	EventBus.ui_modal_changed.connect(_on_ui_modal_changed)
 	EventBus.node_changed.connect(_on_node_changed)
 
 	_world_label.text = "world:    %s" % _world_code
@@ -194,8 +199,13 @@ func _send_action(action: String) -> void:
 	up.pressed = false
 	Input.parse_input_event(up)
 
+func _on_ui_modal_changed(open: bool) -> void:
+	if _debug_visible:
+		%DebugLayer.visible = not open
+
 func _toggle_debug_readout() -> void:
-	%DebugLayer.visible = not %DebugLayer.visible
+	_debug_visible = not _debug_visible
+	%DebugLayer.visible = _debug_visible
 
 func _process(delta: float) -> void:
 	# WorldState is a read-only mirror; reading it every frame is the intended use.
@@ -240,6 +250,16 @@ func _on_slots_claimed(slots: PackedStringArray) -> void:
 
 func _on_inventory_changed(item_id: String, new_count: int) -> void:
 	_log("inventory %s=%d" % [item_id, new_count])
+
+## One line per diff, so "these arrived together" is something the log states
+## rather than something a reader has to infer from timestamps that may straddle
+## a millisecond.
+func _on_inventory_batch(changed: Dictionary) -> void:
+	var parts: PackedStringArray = []
+	for item_id in changed:
+		parts.append("%s=%d" % [item_id, int(changed[item_id])])
+	parts.sort()
+	_log("inventory-batch [%s]" % " ".join(parts))
 
 func _on_node_changed(node_id: String, ready: bool) -> void:
 	_log("node %s %s" % [node_id, "restocked" if ready else "emptied"])

@@ -10,7 +10,7 @@ class_name Command
 # Opcodes — must match OP.* in match_handler.ts exactly.
 enum Op {
 	GATHER       = 1,   # { "node_id": String }                -> grants item(s)
-	CRAFT        = 2,   # { "recipe_id": String }              -> consumes inputs, grants output
+	CRAFT        = 2,   # { "recipe_id": String, "station": String } -> consumes, grants
 	PLACE        = 3,   # { "item_id": String, "spot": String }
 	ADVANCE_STEP = 4,   # { "milestone_id": String }           -> spends resources, sets flag
 	READ_BOTTLE  = 5,   # { "bottle_id": String }              -> sets story flag
@@ -46,8 +46,10 @@ static func make(op: Op, payload: Dictionary = {}) -> Dictionary:
 static func gather(node_id: String) -> Dictionary:
 	return make(Op.GATHER, { "node_id": node_id })
 
-static func craft(recipe_id: String) -> Dictionary:
-	return make(Op.CRAFT, { "recipe_id": recipe_id })
+## The station is part of the intent: the same recipe is a different act at the
+## stove than at the bench, and the server checks you were at the right one.
+static func craft(recipe_id: String, station: String) -> Dictionary:
+	return make(Op.CRAFT, { "recipe_id": recipe_id, "station": station })
 
 static func advance_step(milestone_id: String) -> Dictionary:
 	return make(Op.ADVANCE_STEP, { "milestone_id": milestone_id })
