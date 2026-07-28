@@ -20,6 +20,7 @@ signal debug_toggle_requested()
 @onready var _inventory: InventoryPanel = %Inventory
 @onready var _pause: PauseMenu = %Pause
 @onready var _radial: RadialMenu = %Radial
+@onready var _board: MilestoneBoard = %Board
 
 var _hold := 0.0
 var _holding := false
@@ -31,15 +32,23 @@ func _ready() -> void:
 	_pause.chose_debug.connect(func() -> void: debug_toggle_requested.emit())
 	_radial.closed.connect(_on_any_closed)
 	EventBus.station_wheel_requested.connect(_on_station_wheel_requested)
+	_board.closed.connect(_on_any_closed)
+	EventBus.milestone_board_requested.connect(_on_board_requested)
 
 func any_open() -> bool:
-	return _inventory.is_open() or _pause.is_open() or _radial.is_open()
+	return _inventory.is_open() or _pause.is_open() or _radial.is_open() or _board.is_open()
 
 ## The wheel announces its own modality when it opens, so this only forwards.
 func _on_station_wheel_requested(station: Station, slot: String, input_prefix: String) -> void:
 	if any_open():
 		return
 	_radial.open(station, slot, input_prefix)
+	menu_opened.emit()
+
+func _on_board_requested(slot: String, input_prefix: String) -> void:
+	if any_open():
+		return
+	_board.open(slot, input_prefix)
 	menu_opened.emit()
 
 func _process(delta: float) -> void:

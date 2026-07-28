@@ -150,10 +150,10 @@ func send_command(cmd: Dictionary) -> void:
 ## Where a keeper appears to be. Not a command: no validation, no persistence, no
 ## WorldState. Dropped silently when offline — a lost pose is a stale frame, and
 ## the next one is 100ms away.
-func send_pose(slot: String, pos: Vector2, facing: int) -> void:
+func send_pose(slot: String, pos: Vector2, facing: int, room: String) -> void:
 	if status != "online":
 		return
-	var cmd := Command.pose(slot, pos, facing)
+	var cmd := Command.pose(slot, pos, facing, room)
 	_socket.send_match_state_async(match_id, int(cmd["op"]), JSON.stringify(cmd["data"]))
 
 # --- incoming ---
@@ -184,6 +184,7 @@ func _apply_pose_echo(raw: String) -> void:
 			Vector2(float(p.get("x", 0.0)), float(p.get("y", 0.0))),
 			int(p.get("f", 0)),
 			float(p.get("t", 0.0)) / 1000.0,
+			String(p.get("r", "")),
 		)
 
 ## Authoritative state diff arrived. We do NOT trust local prediction here for

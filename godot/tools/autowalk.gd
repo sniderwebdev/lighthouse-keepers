@@ -85,6 +85,41 @@ const ROUTES: Dictionary = {
 		[1.2, "dpad_right", ""],
 		[3.0, "", ""],
 	],
+	# Stand in front of the hearth, for a look at it.
+	"to_hearth": [
+		[2.5, "move_left", ""],
+		[2.0, "move_up", ""],
+		[12.0, "", ""],
+	],
+	# From the tower arrival point, walk to the board and seal the current step.
+	"seal_step": [
+		[1.3, "move_left", ""],
+		[0.5, "", ""],
+		[0.3, "interact", ""],
+		[0.6, "", ""],
+		[0.3, "interact", ""],
+		[3.0, "", ""],
+	],
+	# The same, but step DOWN the chain first, onto a locked card, and try it.
+	"seal_locked": [
+		[1.3, "move_left", ""],
+		[0.5, "", ""],
+		[0.3, "interact", ""],
+		[0.6, "", ""],
+		[0.2, "ui_down", ""],
+		[0.2, "", ""],
+		[0.2, "ui_down", ""],
+		[0.4, "", ""],
+		[0.3, "interact", ""],
+		[3.0, "", ""],
+	],
+	# Walk from the beach spawn into the tower door.
+	"to_tower": [
+		[2.6, "move_right", ""],
+		[0.4, "", ""],
+		[0.3, "interact", ""],
+		[6.0, "", ""],
+	],
 	# Same, but mash the button — the world should still only hand it over once.
 	"gather_spam": [
 		[6.9, "move_left", ""],
@@ -104,6 +139,9 @@ const AIM_PREFIX := "aim_"
 ## The same gesture with the d-pad button rather than the stick axis, to prove
 ## the wheel answers both.
 const DPAD_PREFIX := "dpad_"
+## Menu navigation has to travel as an EVENT, not as poked action state: focus
+## navigation is event driven and would ignore the latter entirely.
+const UI_PREFIX := "ui_"
 
 @export var route: String = "tour"
 
@@ -138,12 +176,17 @@ func _hold(prefix: String, action: String, into_step: float) -> void:
 		elif Input.is_action_pressed(full):
 			Input.action_release(full)
 
+	if action.begins_with(UI_PREFIX):
+		if into_step < 0.05:
+			_send_ui_action(action)
+		return
+
 	# Aiming: keep interact down and push a direction, which is the actual wheel
 	# gesture. The stick form presses the movement action; the d-pad form sends a
 	# real joypad button event so the two input paths are tested separately.
 	if action.begins_with(AIM_PREFIX) or action.begins_with(DPAD_PREFIX):
 		if not Input.is_action_pressed(prefix + "interact"):
-			Input.action_press(prefix + "interact")
+			_send_action(prefix + "interact", true)
 		var dir := "move_" + action.split("_", true, 1)[1]
 		if action.begins_with(DPAD_PREFIX):
 			_press_dpad(dir, into_step < 0.1)
@@ -153,18 +196,30 @@ func _hold(prefix: String, action: String, into_step: float) -> void:
 
 	# A single deliberate press: held down, so is_action_just_pressed fires once
 	# and only once no matter how long the step lasts.
+	#
+	# Sent as an EVENT rather than by poking the action state. Both reach code
+	# that polls Input, but only an event reaches code that listens for one — and
+	# menus listen. Poking the state alone opens the board and then cannot press
+	# anything on it.
 	if action == INTERACT:
 		if not Input.is_action_pressed(prefix + "interact"):
-			Input.action_press(prefix + "interact")
+			_send_action(prefix + "interact", true)
 	elif action == INTERACT_SPAM:
 		# Mashing: released and re-pressed every frame, which is the worst case
 		# the server's idempotency has to survive.
-		if Input.is_action_pressed(prefix + "interact"):
-			Input.action_release(prefix + "interact")
-		else:
-			Input.action_press(prefix + "interact")
+		_send_action(prefix + "interact", not Input.is_action_pressed(prefix + "interact"))
 	elif Input.is_action_pressed(prefix + "interact"):
-		Input.action_release(prefix + "interact")
+		_send_action(prefix + "interact", false)
+
+func _send_ui_action(action: String) -> void:
+	_send_action(action, true)
+	_send_action(action, false)
+
+func _send_action(action: String, pressed: bool) -> void:
+	var ev := InputEventAction.new()
+	ev.action = action
+	ev.pressed = pressed
+	Input.parse_input_event(ev)
 
 ## Sends the physical d-pad button rather than poking the action, so what is
 ## exercised is the binding in the input map and not just our own bookkeeping.
@@ -182,4 +237,5 @@ func _press_dpad(dir: String, _first_frame: bool) -> void:
 func _release_all(prefix: String) -> void:
 	for dir in DIRS:
 		Input.action_release(prefix + dir)
-	Input.action_release(prefix + "interact")
+	if Input.is_action_pressed(prefix + "interact"):
+		_send_action(prefix + "interact", false)

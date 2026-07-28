@@ -45,7 +45,8 @@ func apply_diff(diff: Dictionary) -> void:
 		var batch: Dictionary = {}
 		for item_id in touched:
 			batch[item_id] = inventory[item_id]
-		EventBus.inventory_batch_applied.emit(batch)
+		if not batch.is_empty():
+			EventBus.inventory_batch_applied.emit(batch)
 		for item_id in touched:
 			EventBus.inventory_changed.emit(item_id, inventory[item_id])
 

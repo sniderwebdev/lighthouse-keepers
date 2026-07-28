@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://blighthousekeepermenus"]
+[gd_scene load_steps=6 format=3 uid="uid://blighthousekeepermenus"]
 
 [ext_resource type="Script" path="res://ui/game_menus.gd" id="1_menus"]
 [ext_resource type="PackedScene" path="res://ui/inventory_panel.tscn" id="2_inv"]
 [ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="3_pause"]
 [ext_resource type="PackedScene" path="res://ui/radial_menu.tscn" id="4_radial"]
+[ext_resource type="PackedScene" path="res://ui/milestone_board.tscn" id="5_board"]
 
 [node name="GameMenus" type="CanvasLayer"]
 layer = 50
@@ -18,5 +19,9 @@ unique_name_in_owner = true
 visible = false
 
 [node name="Radial" parent="." instance=ExtResource("4_radial")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Board" parent="." instance=ExtResource("5_board")]
 unique_name_in_owner = true
 visible = false

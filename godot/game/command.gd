@@ -28,8 +28,8 @@ enum Op {
 ## are cosmetic mirroring, not authoritative shared state (PLAN.md M1), so they
 ## deliberately bypass WorldState. If you ever need a position the world can be
 ## held to — a milestone, a gate, a spawn — that is a Command, not a pose.
-const OP_POSE := 20        # client -> server: { "slot", "x", "y", "f", "t" }
-const OP_POSE_ECHO := 120  # server -> clients: { "poses": { slot: {x,y,f,t} } }
+const OP_POSE := 20        # client -> server: { "slot", "x", "y", "f", "t", "r" }
+const OP_POSE_ECHO := 120  # server -> clients: { "poses": { slot: {x,y,f,t,r} } }
 const OP_STATE_DIFF := 100 # server -> clients: the authoritative diff
 
 ## Keeper slots. In couch mode one client drives both; every slot-sensitive
@@ -80,7 +80,11 @@ static func caught(slot: String, zone: String) -> Dictionary:
 ## two machines' clocks cancels out and nothing has to be synchronised. Without
 ## it the receiver would have to time samples by arrival, which measures the
 ## network's jitter rather than the keeper's movement.
-static func pose(slot: String, pos: Vector2, facing: int) -> Dictionary:
+## `r` is which room they are standing in. Still presentation: it decides whether
+## to DRAW the other keeper, not whether they exist. A keeper on the beach and a
+## keeper in the tower are both entirely present in the world.
+static func pose(slot: String, pos: Vector2, facing: int, room: String) -> Dictionary:
 	return { "op": OP_POSE, "data": {
-		"slot": slot, "x": pos.x, "y": pos.y, "f": facing, "t": Time.get_ticks_msec(),
+		"slot": slot, "x": pos.x, "y": pos.y, "f": facing,
+		"t": Time.get_ticks_msec(), "r": room,
 	} }

@@ -27,8 +27,8 @@ const OP = {
   // Not commands. Where a keeper APPEARS to be is presentation, not authoritative
   // shared state (PLAN.md M1): never validated against the world, never persisted,
   // never merged into WorldState. Relayed only.
-  POSE: 20,        // client -> server: { slot, x, y, f, t }
-  POSE_ECHO: 120,  // server -> clients: { poses: { slot: {x,y,f,t} } }
+  POSE: 20,        // client -> server: { slot, x, y, f, t, r }
+  POSE_ECHO: 120,  // server -> clients: { poses: { slot: {x,y,f,t,r} } }
 
   STATE_DIFF: 100, // server -> client
 };
@@ -143,8 +143,9 @@ interface MatchState {
 interface Pose {
   x: number;
   y: number;
-  f: number;  // facing, 0-7
-  t: number;  // SENDER's clock in ms, relayed untouched
+  f: number;   // facing, 0-7
+  t: number;   // SENDER's clock in ms, relayed untouched
+  r: string;   // which room they are standing in
 }
 
 // Server-side recipe table. Mirror of the .tres content under
@@ -177,10 +178,34 @@ const RECIPES: { [id: string]: RecipeDef } = {
     station: "stove", unlock_flag: "TODO_CONTENT_chowder_unlock",
   },
 };
-const MILESTONE_COST: { [id: string]: { [k: string]: number } } = {
-  fix_stairs: { driftwood: 5 },
-  repair_lens: { brass_scrap: 3, glass_shard: 2 },
-  relight_lamp: { lamp_oil: 2 },
+// The restoration chain. Costs and order are PLAN.md's, verbatim; this table
+// mirrors the .tres under godot/content/milestones/ and is the copy that counts.
+//
+// Order is enforced by `requires` rather than by position: a step is fundable
+// only once the step before it has set its flag, so no amount of resources buys
+// you the lens before the glass.
+interface MilestoneDef {
+  cost: { [k: string]: number };
+  requires: string;   // "" = the first step
+  grants: string;     // flag set when it is sealed
+}
+const MILESTONES: { [id: string]: MilestoneDef } = {
+  clear_hearth: { cost: { driftwood: 4 }, requires: "", grants: "hearth_lit" },
+  fix_stairs: {
+    cost: { driftwood: 6, patch_kit: 1 }, requires: "hearth_lit", grants: "stairs_fixed",
+  },
+  repair_glass: {
+    cost: { glass_shard: 3, patch_kit: 1 }, requires: "stairs_fixed", grants: "glass_repaired",
+  },
+  restore_lens: {
+    cost: { brass_scrap: 3, glass_shard: 2 }, requires: "glass_repaired", grants: "lens_restored",
+  },
+  // Funding the relight is not lighting it. This grants `lamp_ready`; `lamp_lit`
+  // belongs to the tandem gate in M7, because the climax is the two of you
+  // reaching for it together and a purchase cannot stand in for that.
+  relight_lamp: {
+    cost: { lamp_oil: 2 }, requires: "lens_restored", grants: "lamp_ready",
+  },
 };
 
 const matchInit: nkruntime.MatchInitFunction = (ctx, logger, nk, params) => {
@@ -442,14 +467,29 @@ function handleCommand(
       break;
     }
     case OP.ADVANCE_STEP: {
-      const cost = MILESTONE_COST[data.milestone_id];
-      if (!cost || !afford(w, cost)) return;
-      for (const k in cost) grant(s, k, -cost[k]);
-      w.milestones[data.milestone_id] = "done";
+      const id = String(data.milestone_id || "");
+      const step = MILESTONES[id];
+      if (!step) return;                                  // silent reject = cozy
+      if (w.milestones[id] === "done") return;            // already sealed
+      // The chain, enforced here and nowhere else that matters. A client with a
+      // full basket and a doctored request still cannot skip a step.
+      if (step.requires !== "" && !w.flags[step.requires]) return;
+      if (!afford(w, step.cost)) return;
+
+      for (const k in step.cost) grant(s, k, -step.cost[k]);
+      w.milestones[id] = "done";
+      w.flags[step.grants] = true;
       s.dirty = true;
+      // Cost, status and flag in ONE diff: the tower lights up at the same
+      // moment the driftwood leaves the basket, on both screens.
       const done: { [k: string]: string } = {};
-      done[data.milestone_id] = "done";
-      broadcast(dispatcher, { inventory: changedInv(w, cost), milestones: done });
+      done[id] = "done";
+      const flagged: { [k: string]: boolean } = {};
+      flagged[step.grants] = true;
+      broadcast(dispatcher, {
+        inventory: changedInv(w, step.cost), milestones: done, flags: flagged,
+      });
+      logger.info("sealed milestone %s (%s)", id, step.grants);
       break;
     }
     case OP.READ_BOTTLE: {
@@ -520,6 +560,7 @@ function handleCommand(
       // against this machine's jitter instead of the sender's motion.
       const pose: Pose = {
         x: x, y: y, f: Math.floor(Number(data.f) || 0) & 7, t: Number(data.t) || 0,
+        r: String(data.r || ""),
       };
       s.poses[slot] = pose;
       // Relayed one for one rather than coalesced per tick. Two 10Hz clocks

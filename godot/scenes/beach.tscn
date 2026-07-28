@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3 uid="uid://blighthousekeeperbeach"]
+[gd_scene load_steps=15 format=3 uid="uid://blighthousekeeperbeach"]
 
 [ext_resource type="Script" path="res://scenes/beach.gd" id="1_beach"]
 [ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://game/shore_zone.gd" id="4_zone"]
 [ext_resource type="PackedScene" path="res://game/resource_node.tscn" id="5_resource"]
 [ext_resource type="PackedScene" path="res://game/station.tscn" id="6_station"]
+[ext_resource type="PackedScene" path="res://game/doorway.tscn" id="7_door"]
 
 [sub_resource type="RectangleShape2D" id="Shape_wall_h"]
 size = Vector2(1280, 16)
@@ -28,6 +29,8 @@ size = Vector2(8, 688)
 [node name="Beach" type="Node2D"]
 y_sort_enabled = true
 script = ExtResource("1_beach")
+room_id = "beach"
+arrival = NodePath("Arrival")
 
 [node name="Ambient" type="CanvasModulate" parent="."]
 unique_name_in_owner = true
@@ -210,6 +213,9 @@ position = Vector2(984, 400)
 unique_name_in_owner = true
 position = Vector2(940, 400)
 
+[node name="Arrival" type="Marker2D" parent="."]
+position = Vector2(1160, 460)
+
 [node name="Actors" type="Node2D" parent="."]
 unique_name_in_owner = true
 y_sort_enabled = true
@@ -268,6 +274,11 @@ display_name = "the bench"
 position = Vector2(1020, 480)
 station_id = "stove"
 display_name = "the stove"
+
+[node name="DoorIn" parent="Actors" instance=ExtResource("7_door")]
+position = Vector2(1180, 420)
+to_scene = "tower"
+to_name = "the tower"
 
 [node name="Camera" type="Camera2D" parent="."]
 unique_name_in_owner = true

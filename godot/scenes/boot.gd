@@ -17,6 +17,7 @@ extends Node
 ##   --autowalk[=route]   synthesise pad input along a named debug route
 ##   --debug-gather=a,b   gather these node ids straight away (debug seeding)
 ##   --ui-selftest        drive the basket with synthesised pad input and report
+##   --debug-advance=a,b  send ADVANCE_STEP directly, bypassing the board
 ##   --shot=/abs/path.png grab the 640x360 viewport, then quit
 ##   --shot-at=SECONDS    when to grab it (default 6)
 ##
@@ -29,6 +30,7 @@ const HEARTBEAT_SECONDS := 2.0
 ## and camera evidence is measured against its geometry.
 const SCENES := {
 	"beach": "res://scenes/beach.tscn",
+	"tower": "res://scenes/tower.tscn",
 	"room": "res://scenes/world.tscn",
 }
 const DEFAULT_SCENE := "beach"
@@ -50,6 +52,7 @@ var _autowalk := false
 var _autowalk_route := "tour"
 var _debug_gather: PackedStringArray = []
 var _ui_selftest := false
+var _debug_advance: PackedStringArray = []
 var _debug_visible := true
 var _scene := DEFAULT_SCENE
 var _world: Node2D = null
@@ -65,6 +68,7 @@ func _ready() -> void:
 	# Dev furniture gets out of the way of real UI rather than sitting on top of
 	# it — the readout is a lens on the world, not part of the game.
 	EventBus.ui_modal_changed.connect(_on_ui_modal_changed)
+	EventBus.room_change_requested.connect(_on_room_change_requested)
 	EventBus.node_changed.connect(_on_node_changed)
 
 	_world_label.text = "world:    %s" % _world_code
@@ -114,6 +118,8 @@ func _parse_flags() -> void:
 			_debug_gather = arg.split("=", true, 1)[1].split(",")
 		elif arg == "--ui-selftest":
 			_ui_selftest = true
+		elif arg.begins_with("--debug-advance="):
+			_debug_advance = arg.split("=", true, 1)[1].split(",")
 		elif arg.begins_with("--scene="):
 			var wanted := arg.split("=", true, 1)[1]
 			if SCENES.has(wanted):
@@ -161,6 +167,12 @@ func _enter_world() -> void:
 		Net.send_command(Command.gather(node_id))
 	if not _debug_gather.is_empty():
 		_log("debug: gathered %s" % ", ".join(_debug_gather))
+	# Straight past the board, to prove the ORDER is the server's rule and not
+	# just something the UI declines to offer.
+	for milestone_id in _debug_advance:
+		Net.send_command(Command.advance_step(milestone_id))
+	if not _debug_advance.is_empty():
+		_log("debug: sent advance_step for %s" % ", ".join(_debug_advance))
 	if _ui_selftest:
 		_run_ui_selftest(menus)
 	_log("world entered: %s (%s)" % [_scene, "couch" if Net.is_couch() else "online"])
@@ -198,6 +210,21 @@ func _send_action(action: String) -> void:
 	up.action = action
 	up.pressed = false
 	Input.parse_input_event(up)
+
+## Swapping rooms replaces the hosted world and nothing else — the connection,
+## the claim and the mirror all carry straight on, because none of them ever
+## cared which room anybody was standing in.
+func _on_room_change_requested(scene_key: String) -> void:
+	if not SCENES.has(scene_key) or _world == null:
+		return
+	PlayableWorld.entered_by_door = true
+	_world.queue_free()
+	_world = null
+	_scene = scene_key
+	_world = (load(SCENES[_scene]) as PackedScene).instantiate()
+	%WorldHost.add_child(_world)
+	EventBus.room_changed.emit(scene_key)
+	_log("room -> %s" % scene_key)
 
 func _on_ui_modal_changed(open: bool) -> void:
 	if _debug_visible:

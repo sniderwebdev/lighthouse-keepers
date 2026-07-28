@@ -35,6 +35,14 @@ signal keeper_released(slot: String)
 
 # --- Local gameplay / UI ---
 signal interact_pressed(target: Node)
+## Somebody walked through a door. Rooms are presentation: the world does not
+## care which one you are in, but the other keeper's screen does.
+signal room_changed(room: String)
+signal room_change_requested(scene_key: String)
+
+## A keeper read the board in the tower.
+signal milestone_board_requested(slot: String, input_prefix: String)
+
 ## A keeper held interact at a bench. Carries the pad prefix, because the wheel
 ## is aimed with the same stick that opened it.
 signal station_wheel_requested(station: Station, slot: String, input_prefix: String)
@@ -54,4 +62,4 @@ signal keeper_presence_changed(keeper_id: String, present: bool)  # keeper_id = 
 ## Presentation only — where the OTHER keeper appears to be, at ~10Hz. Never
 ## authoritative; see Command.OP_POSE. `sent_at` is the sender's clock in
 ## seconds, meaningful only as a difference against that same sender.
-signal keeper_pose_received(slot: String, pos: Vector2, facing: int, sent_at: float)
+signal keeper_pose_received(slot: String, pos: Vector2, facing: int, sent_at: float, room: String)

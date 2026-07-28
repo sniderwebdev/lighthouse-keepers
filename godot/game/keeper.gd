@@ -50,6 +50,8 @@ const FRAME_UP := 2
 ## Where the water puts you down again. The yard is safe at every phase the beach
 ## is not, so it is always somewhere you can stand.
 @export var safe_return: NodePath
+## Which room this keeper is standing in. Set by the world that spawned them.
+@export var room: String = ""
 
 @onready var _sprite: Sprite2D = %Sprite
 @onready var _interactor: Interactor = %Interactor
@@ -72,6 +74,7 @@ var _last_sent := Vector2.INF
 var _buffer: Array[Dictionary] = []
 var _play_head := 0.0
 var _has_pose := false
+var _elsewhere := false
 
 func _ready() -> void:
 	if sheet != null:
@@ -158,13 +161,24 @@ func _publish_pose() -> void:
 	if position.is_equal_approx(_last_sent):
 		return
 	_last_sent = position
-	Net.send_pose(slot, position, facing)
+	Net.send_pose(slot, position, facing, room)
 
 # --- remote: replay what arrived ---
 
-func _on_pose_received(p_slot: String, pos: Vector2, p_facing: int, sent_at: float) -> void:
+func _on_pose_received(
+	p_slot: String, pos: Vector2, p_facing: int, sent_at: float, p_room: String,
+) -> void:
 	if p_slot != slot:
 		return
+	# Somewhere else entirely: still present, just not in this room to be drawn.
+	if p_room != room:
+		if _elsewhere != true:
+			_elsewhere = true
+			_update_visibility()
+		return
+	if _elsewhere:
+		_elsewhere = false
+		_update_visibility()
 	# Out-of-order arrivals are stale by definition; the newer sample already
 	# says everything they would.
 	if not _buffer.is_empty() and sent_at <= float(_buffer[-1]["st"]):
@@ -291,7 +305,9 @@ func _on_presence_changed(p_slot: String, _present: bool) -> void:
 ## remote one needs both a keeper on the other end and a pose saying where they
 ## are; either alone would put a keeper on screen who is not really anywhere.
 func _update_visibility() -> void:
-	visible = is_local or (WorldState.presence.get(slot, false) and _has_pose)
+	visible = is_local or (
+		WorldState.presence.get(slot, false) and _has_pose and not _elsewhere
+	)
 
 # --- facing ---
 
