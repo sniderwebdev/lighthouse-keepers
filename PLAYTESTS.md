@@ -4,8 +4,9 @@ Synthesized-input checks prove systems, not feel. Speeds, timings and deadzones
 are only ever changed off the back of an entry in this file (CLAUDE.md, Testing
 law). An automated run may not move them, and neither may an opinion.
 
-**Claude does not write entries here.** The author runs the playtest and records
-what happened; Claude reads it and turns the findings into committed defaults.
+**Claude never invents an entry.** The author plays; Claude may transcribe what
+the author reports and the author confirms it. What Claude may not do is write
+down a finding nobody had, or move a value because an automated run suggested it.
 
 ## How to run one
 
