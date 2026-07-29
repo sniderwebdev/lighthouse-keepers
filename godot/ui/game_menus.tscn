@@ -1,0 +1,42 @@
+[gd_scene load_steps=9 format=3 uid="uid://blighthousekeepermenus"]
+
+[ext_resource type="Script" path="res://ui/game_menus.gd" id="1_menus"]
+[ext_resource type="PackedScene" path="res://ui/inventory_panel.tscn" id="2_inv"]
+[ext_resource type="PackedScene" path="res://ui/pause_menu.tscn" id="3_pause"]
+[ext_resource type="PackedScene" path="res://ui/radial_menu.tscn" id="4_radial"]
+[ext_resource type="PackedScene" path="res://ui/milestone_board.tscn" id="5_board"]
+[ext_resource type="PackedScene" path="res://ui/bottle_reader.tscn" id="6_reader"]
+[ext_resource type="PackedScene" path="res://ui/dialogue_box.tscn" id="7_dialogue"]
+[ext_resource type="PackedScene" path="res://ui/log_book.tscn" id="8_log"]
+
+[node name="GameMenus" type="CanvasLayer"]
+layer = 50
+script = ExtResource("1_menus")
+
+[node name="Inventory" parent="." instance=ExtResource("2_inv")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Pause" parent="." instance=ExtResource("3_pause")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Radial" parent="." instance=ExtResource("4_radial")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Board" parent="." instance=ExtResource("5_board")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Reader" parent="." instance=ExtResource("6_reader")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Dialogue" parent="." instance=ExtResource("7_dialogue")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Log" parent="." instance=ExtResource("8_log")]
+unique_name_in_owner = true
+visible = false

@@ -1,0 +1,94 @@
+[gd_scene load_steps=3 format=3 uid="uid://blighthousekeeperinv"]
+
+[ext_resource type="Script" path="res://ui/inventory_panel.gd" id="1_inv"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.141176, 0.113725, 0.278431, 0.941176)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.380392, 0.298039, 0.494118, 1)
+
+[node name="InventoryPanel" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_inv")
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_bottom = 18
+
+[node name="Centre" type="CenterContainer" parent="SafeArea"]
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Panel" type="PanelContainer" parent="SafeArea/Centre"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="Pad" type="MarginContainer" parent="SafeArea/Centre/Panel"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="Rows" type="VBoxContainer" parent="SafeArea/Centre/Panel/Pad"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="SafeArea/Centre/Panel/Pad/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
+theme_override_font_sizes/font_size = 8
+text = "THE BASKET"
+horizontal_alignment = 1
+
+[node name="Grid" type="GridContainer" parent="SafeArea/Centre/Panel/Pad/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/h_separation = 4
+theme_override_constants/v_separation = 4
+columns = 4
+
+[node name="EmptyLabel" type="Label" parent="SafeArea/Centre/Panel/Pad/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.507843, 0.470588, 0.560784, 1)
+theme_override_font_sizes/font_size = 8
+text = "nothing gathered yet"
+horizontal_alignment = 1
+
+[node name="Hint" type="Label" parent="SafeArea/Centre/Panel/Pad/Rows"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.507843, 0.470588, 0.560784, 1)
+theme_override_font_sizes/font_size = 8
+text = "shared with your keeper"
+horizontal_alignment = 1
+
+[node name="CloseHint" type="Label" parent="SafeArea/Centre/Panel/Pad/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.507843, 0.470588, 0.560784, 1)
+theme_override_font_sizes/font_size = 8
+text = "[B] close"
+horizontal_alignment = 1

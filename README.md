@@ -64,16 +64,68 @@ DESIGN.md                       the living design doc
 
 ## Run it
 
-1. **Server:** install Nakama (Docker is easiest). Add the TS runtime, register the
-   match in `main.ts` (`initializer.registerMatch("lighthouse", {...})`), `tsc`, mount
-   `build/index.js`. Bring up Nakama + Postgres.
-2. **Client:** drop the [nakama-godot](https://github.com/heroiclabs/nakama-godot)
-   addon into the Godot project, then fill the TODOs in `net.gd` (auth, socket,
-   join match). Point `host`/`port` at your server.
-3. **First content:** author a few `.tres` files under `godot/content/{items,recipes,
-   milestones,bottles}/`, and mirror the authoritative recipe/cost tables in
-   `match_handler.ts`. Wire a button to `Net.send_command(Command.gather("driftwood_01"))`
-   and watch the inventory update on both clients.
+**Build the server runtime BEFORE bringing the stack up** — compose mounts only
+`nakama/build/`, which does not exist in a fresh checkout.
+
+```sh
+cd nakama && npm install && npx tsc && cd ..   # -> nakama/build/index.js
+docker compose up -d                            # Nakama + Postgres
+docker compose logs nakama | grep "runtime loaded"
+```
+
+Nakama console: `http://127.0.0.1:7351` (admin / lighthousedev1). Game socket: `7350`.
+
+**Client.** The [nakama-godot](https://github.com/heroiclabs/nakama-godot) addon is
+vendored at `godot/addons/com.heroiclabs.nakama/` (see `INSTALLED_FROM.txt`) and
+registered as the `Nakama` autoload. Open `godot/` in Godot 4 and run — the main
+scene is `scenes/boot.tscn`.
+
+Launch flags (after a `--` separator when using the CLI):
+
+| Flag | Effect |
+|---|---|
+| `--slot=keeper_a` / `--slot=keeper_b` | claim one keeper (online play) |
+| `--couch` | claim BOTH slots on one machine, two pads |
+| `--world=TEST01` | world code to join (default `TEST01`) |
+| `--host= --port=` | point at a non-local server |
+| `--scene=beach` / `--scene=tower` / `--scene=room` | which space to enter |
+| `--net-verbose` | dump the Nakama wire trace |
+| `--shot=/abs/path.png` | grab the 640×360 viewport, then quit |
+
+```sh
+# two keepers, online, on one PC
+godot --path godot -- --slot=keeper_a --world=TEST01
+godot --path godot -- --slot=keeper_b --world=TEST01
+# one PC, two pads
+godot --path godot -- --couch --world=TEST01
+```
+
+**Verify the milestones:** `tools/verify_m0.sh` … `verify_m7.sh` run every
+acceptance criterion for their milestone against the live stack and write
+evidence to `.m0-evidence/` … `.m7-evidence/`. Each run uses a fresh world code,
+so they are safe to re-run.
+
+**Playing it.** Run with no flags and you get the title screen: pick a world code
+with the stick, choose couch or online, choose a keeper. The flags below are for
+launching straight past it, which is what the verifiers do.
+
+**The tide.** One cycle is eight real minutes (`LOW → MID → HIGH → MID`), and it
+only advances while at least one keeper is connected. The sky's colour IS the
+tide readout — there is no meter, by design (DESIGN §2). Because eight minutes is
+a long time to wait for a phase, the local stack exposes a `debug_set_tide` RPC
+that jumps the clock; it answers only when Nakama is started with
+`LIGHTHOUSE_DEV=1`, which `docker-compose.yml` sets and a real deploy would not.
+
+```sh
+curl -s -X POST http://127.0.0.1:7350/v2/rpc/debug_set_tide \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '"{\"world_code\":\"TEST01\",\"t\":0.5}"'   # 0.0 LOW, 0.25 MID, 0.5 HIGH
+```
+
+**Next content:** author `.tres` files under `godot/content/{items,recipes,
+milestones,bottles}/`, and mirror the authoritative recipe/cost tables in
+`match_handler.ts`. Wire a button to `Net.send_command(Command.gather("driftwood_01"))`
+and watch the inventory update on both clients.
 
 ## Keeper slots (couch + online unified)
 

@@ -1,0 +1,311 @@
+[gd_scene load_steps=17 format=3 uid="uid://blighthousekeeperbeach"]
+
+[ext_resource type="Script" path="res://scenes/beach.gd" id="1_beach"]
+[ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
+[ext_resource type="Script" path="res://game/tide_clock.gd" id="3_tide"]
+[ext_resource type="Script" path="res://game/shore_zone.gd" id="4_zone"]
+[ext_resource type="PackedScene" path="res://game/resource_node.tscn" id="5_resource"]
+[ext_resource type="PackedScene" path="res://game/station.tscn" id="6_station"]
+[ext_resource type="PackedScene" path="res://game/doorway.tscn" id="7_door"]
+[ext_resource type="PackedScene" path="res://game/bottle_pickup.tscn" id="8_bottle"]
+[ext_resource type="PackedScene" path="res://game/npc.tscn" id="9_npc"]
+
+[sub_resource type="RectangleShape2D" id="Shape_wall_h"]
+size = Vector2(1280, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_wall_v"]
+size = Vector2(16, 720)
+
+[sub_resource type="RectangleShape2D" id="Shape_sandbar"]
+size = Vector2(270, 688)
+
+[sub_resource type="RectangleShape2D" id="Shape_midbeach"]
+size = Vector2(290, 688)
+
+[sub_resource type="RectangleShape2D" id="Shape_yard"]
+size = Vector2(360, 688)
+
+[sub_resource type="RectangleShape2D" id="Shape_barrier"]
+size = Vector2(8, 688)
+
+[node name="Beach" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_beach")
+room_id = "beach"
+arrival = NodePath("Arrival")
+
+[node name="Ambient" type="CanvasModulate" parent="."]
+unique_name_in_owner = true
+
+[node name="TideClock" type="Node" parent="."]
+unique_name_in_owner = true
+script = ExtResource("3_tide")
+apply_to = NodePath("../Ambient")
+
+[node name="Terrain" type="Node2D" parent="."]
+
+[node name="Sea" type="ColorRect" parent="Terrain"]
+offset_right = 200.0
+offset_bottom = 720.0
+color = Color(0.141176, 0.294118, 0.345098, 1)
+
+[node name="SeaEdge" type="ColorRect" parent="Terrain"]
+offset_left = 176.0
+offset_right = 200.0
+offset_bottom = 720.0
+color = Color(0.172549, 0.364706, 0.419608, 1)
+
+[node name="Sandbar" type="ColorRect" parent="Terrain"]
+offset_left = 200.0
+offset_right = 470.0
+offset_bottom = 720.0
+color = Color(0.301961, 0.270588, 0.360784, 1)
+
+[node name="MidBeach" type="ColorRect" parent="Terrain"]
+offset_left = 470.0
+offset_right = 760.0
+offset_bottom = 720.0
+color = Color(0.227451, 0.200000, 0.278431, 1)
+
+[node name="Yard" type="ColorRect" parent="Terrain"]
+offset_left = 760.0
+offset_right = 1120.0
+offset_bottom = 720.0
+color = Color(0.196078, 0.172549, 0.239216, 1)
+
+[node name="YardGrass" type="ColorRect" parent="Terrain"]
+offset_left = 800.0
+offset_top = 180.0
+offset_right = 1080.0
+offset_bottom = 540.0
+color = Color(0.184314, 0.290196, 0.219608, 1)
+
+[node name="TowerBase" type="ColorRect" parent="Terrain"]
+offset_left = 1120.0
+offset_right = 1280.0
+offset_bottom = 720.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="TowerStone" type="ColorRect" parent="Terrain"]
+offset_left = 1160.0
+offset_top = 220.0
+offset_right = 1264.0
+offset_bottom = 500.0
+color = Color(0.925490, 0.886275, 0.815686, 1)
+
+[node name="ZoneMarkSandbar" type="ColorRect" parent="Terrain"]
+offset_left = 200.0
+offset_top = 352.0
+offset_right = 470.0
+offset_bottom = 356.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="ZoneMarkMid" type="ColorRect" parent="Terrain"]
+offset_left = 470.0
+offset_top = 352.0
+offset_right = 760.0
+offset_bottom = 356.0
+color = Color(0.156863, 0.137255, 0.196078, 1)
+
+[node name="SandbarWater" type="ColorRect" parent="Terrain"]
+visible = false
+offset_left = 200.0
+offset_right = 470.0
+offset_bottom = 720.0
+color = Color(0.172549, 0.364706, 0.419608, 1)
+
+[node name="MidBeachWater" type="ColorRect" parent="Terrain"]
+visible = false
+offset_left = 470.0
+offset_right = 760.0
+offset_bottom = 720.0
+color = Color(0.172549, 0.364706, 0.419608, 1)
+
+[node name="YardWater" type="ColorRect" parent="Terrain"]
+visible = false
+offset_left = 760.0
+offset_right = 1120.0
+offset_bottom = 720.0
+color = Color(0.172549, 0.364706, 0.419608, 1)
+
+[node name="Walls" type="StaticBody2D" parent="."]
+
+[node name="Top" type="CollisionShape2D" parent="Walls"]
+position = Vector2(640, 8)
+shape = SubResource("Shape_wall_h")
+
+[node name="Bottom" type="CollisionShape2D" parent="Walls"]
+position = Vector2(640, 712)
+shape = SubResource("Shape_wall_h")
+
+[node name="Left" type="CollisionShape2D" parent="Walls"]
+position = Vector2(8, 360)
+shape = SubResource("Shape_wall_v")
+
+[node name="Right" type="CollisionShape2D" parent="Walls"]
+position = Vector2(1272, 360)
+shape = SubResource("Shape_wall_v")
+
+[node name="SeaWall" type="CollisionShape2D" parent="Walls"]
+position = Vector2(200, 360)
+shape = SubResource("Shape_barrier")
+
+[node name="ShoreBarriers" type="StaticBody2D" parent="."]
+
+[node name="SandbarWall" type="CollisionShape2D" parent="ShoreBarriers"]
+position = Vector2(470, 360)
+shape = SubResource("Shape_barrier")
+disabled = true
+
+[node name="MidBeachWall" type="CollisionShape2D" parent="ShoreBarriers"]
+position = Vector2(760, 360)
+shape = SubResource("Shape_barrier")
+disabled = true
+
+[node name="YardWall" type="CollisionShape2D" parent="ShoreBarriers"]
+position = Vector2(1120, 360)
+shape = SubResource("Shape_barrier")
+disabled = true
+
+[node name="Zones" type="Node2D" parent="."]
+unique_name_in_owner = true
+
+[node name="SandbarZone" type="Area2D" parent="Zones"]
+collision_mask = 2
+position = Vector2(335, 360)
+script = ExtResource("4_zone")
+zone_id = "sandbar"
+open_phases = PackedStringArray("LOW")
+barrier = NodePath("../../ShoreBarriers/SandbarWall")
+water_overlay = NodePath("../../Terrain/SandbarWater")
+
+[node name="Shape" type="CollisionShape2D" parent="Zones/SandbarZone"]
+shape = SubResource("Shape_sandbar")
+
+[node name="MidBeachZone" type="Area2D" parent="Zones"]
+collision_mask = 2
+position = Vector2(615, 360)
+script = ExtResource("4_zone")
+zone_id = "mid_beach"
+open_phases = PackedStringArray("LOW", "MID")
+barrier = NodePath("../../ShoreBarriers/MidBeachWall")
+water_overlay = NodePath("../../Terrain/MidBeachWater")
+
+[node name="Shape" type="CollisionShape2D" parent="Zones/MidBeachZone"]
+shape = SubResource("Shape_midbeach")
+
+[node name="YardZone" type="Area2D" parent="Zones"]
+collision_mask = 2
+position = Vector2(940, 360)
+script = ExtResource("4_zone")
+zone_id = "yard"
+open_phases = PackedStringArray("LOW", "MID", "HIGH")
+barrier = NodePath("../../ShoreBarriers/YardWall")
+water_overlay = NodePath("../../Terrain/YardWater")
+
+[node name="Shape" type="CollisionShape2D" parent="Zones/YardZone"]
+shape = SubResource("Shape_yard")
+
+[node name="SpawnA" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(896, 400)
+
+[node name="SpawnB" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(984, 400)
+
+[node name="SafeReturn" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(940, 400)
+
+[node name="Arrival" type="Marker2D" parent="."]
+position = Vector2(1160, 460)
+
+[node name="Actors" type="Node2D" parent="."]
+unique_name_in_owner = true
+y_sort_enabled = true
+
+[node name="driftwood_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(300, 250)
+node_id = "driftwood_01"
+item_id = "driftwood"
+
+[node name="kelp_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(380, 500)
+node_id = "kelp_01"
+item_id = "kelp"
+
+[node name="brass_scrap_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(250, 600)
+node_id = "brass_scrap_01"
+item_id = "brass_scrap"
+
+[node name="glass_shard_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(420, 150)
+node_id = "glass_shard_01"
+item_id = "glass_shard"
+
+[node name="driftwood_02" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(540, 200)
+node_id = "driftwood_02"
+item_id = "driftwood"
+
+[node name="driftwood_03" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(700, 560)
+node_id = "driftwood_03"
+item_id = "driftwood"
+
+[node name="kelp_02" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(620, 400)
+node_id = "kelp_02"
+item_id = "kelp"
+
+[node name="glass_shard_02" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(500, 640)
+node_id = "glass_shard_02"
+item_id = "glass_shard"
+
+[node name="driftwood_04" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(820, 280)
+node_id = "driftwood_04"
+item_id = "driftwood"
+
+[node name="workbench" parent="Actors" instance=ExtResource("6_station")]
+position = Vector2(860, 480)
+station_id = "workbench"
+display_name = "the bench"
+
+[node name="stove" parent="Actors" instance=ExtResource("6_station")]
+position = Vector2(1020, 480)
+station_id = "stove"
+display_name = "the stove"
+
+[node name="bottle_01" parent="Actors" instance=ExtResource("8_bottle")]
+position = Vector2(340, 320)
+bottle_id = "bottle_01"
+
+[node name="bottle_02" parent="Actors" instance=ExtResource("8_bottle")]
+position = Vector2(560, 300)
+bottle_id = "bottle_02"
+
+[node name="bottle_03" parent="Actors" instance=ExtResource("8_bottle")]
+position = Vector2(260, 460)
+bottle_id = "bottle_03"
+
+[node name="fish_stub_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(230, 200)
+node_id = "fish_stub_01"
+item_id = "fish_stub"
+
+[node name="hermit_crab" parent="Actors" instance=ExtResource("9_npc")]
+position = Vector2(660, 470)
+npc_id = "hermit_crab"
+
+[node name="DoorIn" parent="Actors" instance=ExtResource("7_door")]
+position = Vector2(1180, 420)
+to_scene = "tower"
+to_name = "the tower"
+
+[node name="Camera" type="Camera2D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_camera")

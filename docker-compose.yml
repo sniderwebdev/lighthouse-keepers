@@ -25,12 +25,16 @@ services:
         exec /nakama/nakama
         --name lighthouse-dev
         --database.address postgres:localdev@postgres:5432/nakama
-        --runtime.js_entrypoint "build/index.js"
+        --runtime.js_entrypoint "index.js"
+        --runtime.env "LIGHTHOUSE_DEV=1"
         --session.token_expiry_sec 7200
         --console.username admin
         --console.password lighthousedev1
     volumes:
-      - ./nakama:/nakama/data
+      # js_entrypoint is resolved relative to <data>/modules, not <data>.
+      # Only the tsc output is mounted — the server has no business seeing the
+      # TypeScript sources or node_modules. Run `npx tsc` in nakama/ first.
+      - ./nakama/build:/nakama/data/modules:ro
     ports:
       - "7350:7350"   # client socket/api
       - "7351:7351"   # admin console

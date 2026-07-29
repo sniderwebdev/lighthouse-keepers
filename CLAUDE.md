@@ -83,6 +83,14 @@ gamepad *first*. Keyboard/mouse is an adaptation, never the design target.
 - Commits: one milestone sub-task per commit, message prefixed with the milestone
   id (`M2: beach colliders follow tide phase`).
 
+## Testing law
+
+- Harness navigation targets named `TestMarker` nodes; timed movement legs are
+  forbidden (they break when a prop moves).
+- Synthesized-input checks prove systems, not feel. Feel parameters (speeds,
+  timings, deadzones) are tuned only via logged human playtests
+  (`PLAYTESTS.md`); do not silently change them based on automated runs.
+
 ## Definition of done (every task)
 
 - Meets the acceptance criteria listed for it in `PLAN.md` — literally, as written.
@@ -109,7 +117,9 @@ is missing, do NOT invent the design and do NOT skip ahead into that screen's UI
 tasks. Instead, pause that task and prompt the author with the exact
 instructions in `PLAN.md` §"UI mock checkpoint" (tell them which file is
 missing, where the brief is, and where to export). Non-UI tasks in the same
-milestone may proceed while waiting. When the PNG exists, implement to match its
+milestone may proceed while waiting. Preferred mock format is the Claude Design **.dc.html export** (it carries
+exact hexes and the d-pad order notes); accept `.png` as fallback — same
+filenames, either extension. When the mock exists, implement to match its
 layout, hierarchy, focus behavior, and palette, adapted to 640×360 — visual
 simplification is fine; structural deviation is not.
 

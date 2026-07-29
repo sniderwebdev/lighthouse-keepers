@@ -1,0 +1,482 @@
+[gd_scene load_steps=10 format=3 uid="uid://blighthousekeepertower"]
+
+[ext_resource type="Script" path="res://scenes/tower.gd" id="1_tower"]
+[ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
+[ext_resource type="Script" path="res://game/visual_state.gd" id="3_visual"]
+[ext_resource type="PackedScene" path="res://game/doorway.tscn" id="4_door"]
+[ext_resource type="PackedScene" path="res://ui/milestone_board_post.tscn" id="5_board"]
+[ext_resource type="PackedScene" path="res://game/bed.tscn" id="6_bed"]
+[ext_resource type="PackedScene" path="res://game/crank.tscn" id="7_crank"]
+
+[sub_resource type="RectangleShape2D" id="Shape_wall_h"]
+size = Vector2(960, 16)
+
+[sub_resource type="RectangleShape2D" id="Shape_wall_v"]
+size = Vector2(16, 540)
+
+[node name="Tower" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_tower")
+room = Rect2(0, 0, 960, 540)
+room_id = "tower"
+arrival = NodePath("Arrival")
+
+[node name="Terrain" type="Node2D" parent="."]
+
+[node name="Floor" type="ColorRect" parent="Terrain"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 960.0
+offset_bottom = 540.0
+color = Color(0.196078, 0.172549, 0.239216, 1)
+
+[node name="FloorInlay" type="ColorRect" parent="Terrain"]
+offset_left = 120.0
+offset_top = 100.0
+offset_right = 840.0
+offset_bottom = 440.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="WallTop" type="ColorRect" parent="Terrain"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 960.0
+offset_bottom = 16.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="WallBottom" type="ColorRect" parent="Terrain"]
+offset_left = 0.0
+offset_top = 524.0
+offset_right = 960.0
+offset_bottom = 540.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="WallLeft" type="ColorRect" parent="Terrain"]
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 16.0
+offset_bottom = 540.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="WallRight" type="ColorRect" parent="Terrain"]
+offset_left = 944.0
+offset_top = 0.0
+offset_right = 960.0
+offset_bottom = 540.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="StoneCourse" type="ColorRect" parent="Terrain"]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 944.0
+offset_bottom = 24.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Hearth" type="Node2D" parent="."]
+position = Vector2(220, 250)
+script = ExtResource("3_visual")
+before = NodePath("Cold")
+after = NodePath("Lit")
+flag = "hearth_lit"
+
+[node name="Cold" type="Node2D" parent="Hearth"]
+
+[node name="Stone" type="ColorRect" parent="Hearth/Cold"]
+offset_left = -40.0
+offset_top = -60.0
+offset_right = 40.0
+offset_bottom = 0.0
+color = Color(0.227451, 0.200000, 0.290196, 1)
+
+[node name="Mouth" type="ColorRect" parent="Hearth/Cold"]
+offset_left = -28.0
+offset_top = -34.0
+offset_right = 28.0
+offset_bottom = 0.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="Ash" type="ColorRect" parent="Hearth/Cold"]
+offset_left = -20.0
+offset_top = -10.0
+offset_right = 20.0
+offset_bottom = -2.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Lit" type="Node2D" parent="Hearth"]
+visible = false
+
+[node name="Stone" type="ColorRect" parent="Hearth/Lit"]
+offset_left = -40.0
+offset_top = -60.0
+offset_right = 40.0
+offset_bottom = 0.0
+color = Color(0.227451, 0.200000, 0.290196, 1)
+
+[node name="Mouth" type="ColorRect" parent="Hearth/Lit"]
+offset_left = -28.0
+offset_top = -34.0
+offset_right = 28.0
+offset_bottom = 0.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="Glow" type="ColorRect" parent="Hearth/Lit"]
+offset_left = -34.0
+offset_top = -30.0
+offset_right = 34.0
+offset_bottom = 0.0
+color = Color(0.949020, 0.756863, 0.305882, 1)
+
+[node name="Flame" type="ColorRect" parent="Hearth/Lit"]
+offset_left = -16.0
+offset_top = -26.0
+offset_right = 16.0
+offset_bottom = -4.0
+color = Color(0.964706, 0.780392, 0.321569, 1)
+
+[node name="Core" type="ColorRect" parent="Hearth/Lit"]
+offset_left = -8.0
+offset_top = -20.0
+offset_right = 8.0
+offset_bottom = -6.0
+color = Color(1.000000, 0.952941, 0.768627, 1)
+
+[node name="Spill" type="ColorRect" parent="Hearth/Lit"]
+offset_left = -52.0
+offset_top = -4.0
+offset_right = 52.0
+offset_bottom = 2.0
+color = Color(0.949020, 0.756863, 0.305882, 1)
+
+[node name="Stairs" type="Node2D" parent="."]
+position = Vector2(760, 250)
+script = ExtResource("3_visual")
+before = NodePath("Broken")
+after = NodePath("Fixed")
+flag = "stairs_fixed"
+
+[node name="Broken" type="Node2D" parent="Stairs"]
+
+[node name="Tread0" type="ColorRect" parent="Stairs/Broken"]
+offset_left = -40.0
+offset_top = -60.0
+offset_right = 20.0
+offset_bottom = -50.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Tread1" type="ColorRect" parent="Stairs/Broken"]
+offset_left = -34.0
+offset_top = -30.0
+offset_right = 18.0
+offset_bottom = -20.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Tread2" type="ColorRect" parent="Stairs/Broken"]
+offset_left = -28.0
+offset_top = 20.0
+offset_right = 16.0
+offset_bottom = 30.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Gap" type="ColorRect" parent="Stairs/Broken"]
+offset_left = -20.0
+offset_top = -14.0
+offset_right = 24.0
+offset_bottom = 12.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="Fixed" type="Node2D" parent="Stairs"]
+visible = false
+
+[node name="Tread0" type="ColorRect" parent="Stairs/Fixed"]
+offset_left = -40.0
+offset_top = -60.0
+offset_right = 32.0
+offset_bottom = -46.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Tread1" type="ColorRect" parent="Stairs/Fixed"]
+offset_left = -40.0
+offset_top = -40.0
+offset_right = 32.0
+offset_bottom = -26.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Tread2" type="ColorRect" parent="Stairs/Fixed"]
+offset_left = -40.0
+offset_top = -20.0
+offset_right = 32.0
+offset_bottom = -6.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Tread3" type="ColorRect" parent="Stairs/Fixed"]
+offset_left = -40.0
+offset_top = 0.0
+offset_right = 32.0
+offset_bottom = 14.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Tread4" type="ColorRect" parent="Stairs/Fixed"]
+offset_left = -40.0
+offset_top = 20.0
+offset_right = 32.0
+offset_bottom = 34.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Rail" type="ColorRect" parent="Stairs/Fixed"]
+offset_left = 34.0
+offset_top = -64.0
+offset_right = 40.0
+offset_bottom = 32.0
+color = Color(0.227451, 0.200000, 0.290196, 1)
+
+[node name="Glass" type="Node2D" parent="."]
+position = Vector2(480, 130)
+script = ExtResource("3_visual")
+before = NodePath("Boarded")
+after = NodePath("Glazed")
+flag = "glass_repaired"
+
+[node name="Boarded" type="Node2D" parent="Glass"]
+
+[node name="Frame" type="ColorRect" parent="Glass/Boarded"]
+offset_left = -70.0
+offset_top = -50.0
+offset_right = 70.0
+offset_bottom = 26.0
+color = Color(0.227451, 0.200000, 0.290196, 1)
+
+[node name="Hole" type="ColorRect" parent="Glass/Boarded"]
+offset_left = -60.0
+offset_top = -40.0
+offset_right = 60.0
+offset_bottom = 16.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="Board0" type="ColorRect" parent="Glass/Boarded"]
+offset_left = -58.0
+offset_top = -36.0
+offset_right = -18.0
+offset_bottom = -26.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Board1" type="ColorRect" parent="Glass/Boarded"]
+offset_left = -20.0
+offset_top = -32.0
+offset_right = 20.0
+offset_bottom = -22.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Board2" type="ColorRect" parent="Glass/Boarded"]
+offset_left = 18.0
+offset_top = -28.0
+offset_right = 58.0
+offset_bottom = -18.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Glazed" type="Node2D" parent="Glass"]
+visible = false
+
+[node name="Frame" type="ColorRect" parent="Glass/Glazed"]
+offset_left = -70.0
+offset_top = -50.0
+offset_right = 70.0
+offset_bottom = 26.0
+color = Color(0.227451, 0.200000, 0.290196, 1)
+
+[node name="Pane0" type="ColorRect" parent="Glass/Glazed"]
+offset_left = -58.0
+offset_top = -40.0
+offset_right = -32.0
+offset_bottom = 16.0
+color = Color(0.207843, 0.364706, 0.435294, 1)
+
+[node name="Sheen0" type="ColorRect" parent="Glass/Glazed"]
+offset_left = -58.0
+offset_top = -40.0
+offset_right = -50.0
+offset_bottom = 16.0
+color = Color(0.247059, 0.505882, 0.545098, 1)
+
+[node name="Pane1" type="ColorRect" parent="Glass/Glazed"]
+offset_left = -28.0
+offset_top = -40.0
+offset_right = -2.0
+offset_bottom = 16.0
+color = Color(0.207843, 0.364706, 0.435294, 1)
+
+[node name="Sheen1" type="ColorRect" parent="Glass/Glazed"]
+offset_left = -28.0
+offset_top = -40.0
+offset_right = -20.0
+offset_bottom = 16.0
+color = Color(0.247059, 0.505882, 0.545098, 1)
+
+[node name="Pane2" type="ColorRect" parent="Glass/Glazed"]
+offset_left = 2.0
+offset_top = -40.0
+offset_right = 28.0
+offset_bottom = 16.0
+color = Color(0.207843, 0.364706, 0.435294, 1)
+
+[node name="Sheen2" type="ColorRect" parent="Glass/Glazed"]
+offset_left = 2.0
+offset_top = -40.0
+offset_right = 10.0
+offset_bottom = 16.0
+color = Color(0.247059, 0.505882, 0.545098, 1)
+
+[node name="Pane3" type="ColorRect" parent="Glass/Glazed"]
+offset_left = 32.0
+offset_top = -40.0
+offset_right = 58.0
+offset_bottom = 16.0
+color = Color(0.207843, 0.364706, 0.435294, 1)
+
+[node name="Sheen3" type="ColorRect" parent="Glass/Glazed"]
+offset_left = 32.0
+offset_top = -40.0
+offset_right = 40.0
+offset_bottom = 16.0
+color = Color(0.247059, 0.505882, 0.545098, 1)
+
+[node name="Lens" type="Node2D" parent="."]
+position = Vector2(480, 300)
+script = ExtResource("3_visual")
+before = NodePath("Bare")
+after = NodePath("Restored")
+flag = "lens_restored"
+
+[node name="Bare" type="Node2D" parent="Lens"]
+
+[node name="Housing" type="ColorRect" parent="Lens/Bare"]
+offset_left = -36.0
+offset_top = -46.0
+offset_right = 36.0
+offset_bottom = 0.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Empty" type="ColorRect" parent="Lens/Bare"]
+offset_left = -26.0
+offset_top = -38.0
+offset_right = 26.0
+offset_bottom = -8.0
+color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[node name="Restored" type="Node2D" parent="Lens"]
+visible = false
+
+[node name="Housing" type="ColorRect" parent="Lens/Restored"]
+offset_left = -36.0
+offset_top = -46.0
+offset_right = 36.0
+offset_bottom = 0.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Brass" type="ColorRect" parent="Lens/Restored"]
+offset_left = -30.0
+offset_top = -42.0
+offset_right = 30.0
+offset_bottom = -4.0
+color = Color(0.949020, 0.756863, 0.305882, 1)
+
+[node name="Prism" type="ColorRect" parent="Lens/Restored"]
+offset_left = -22.0
+offset_top = -36.0
+offset_right = 22.0
+offset_bottom = -10.0
+color = Color(0.247059, 0.505882, 0.545098, 1)
+
+[node name="Glint" type="ColorRect" parent="Lens/Restored"]
+offset_left = -18.0
+offset_top = -32.0
+offset_right = -10.0
+offset_bottom = -14.0
+color = Color(0.925490, 0.886275, 0.815686, 1)
+
+[node name="Lamp" type="Node2D" parent="."]
+position = Vector2(480, 210)
+script = ExtResource("3_visual")
+before = NodePath("Dark")
+after = NodePath("Ready")
+flag = "lamp_ready"
+
+[node name="Dark" type="Node2D" parent="Lamp"]
+
+[node name="Wick" type="ColorRect" parent="Lamp/Dark"]
+offset_left = -8.0
+offset_top = -26.0
+offset_right = 8.0
+offset_bottom = 0.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Ready" type="Node2D" parent="Lamp"]
+visible = false
+
+[node name="Wick" type="ColorRect" parent="Lamp/Ready"]
+offset_left = -8.0
+offset_top = -26.0
+offset_right = 8.0
+offset_bottom = 0.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Oil" type="ColorRect" parent="Lamp/Ready"]
+offset_left = -6.0
+offset_top = -12.0
+offset_right = 6.0
+offset_bottom = 0.0
+color = Color(0.949020, 0.756863, 0.305882, 1)
+
+[node name="Walls" type="StaticBody2D" parent="."]
+
+[node name="Top" type="CollisionShape2D" parent="Walls"]
+position = Vector2(480, 8)
+shape = SubResource("Shape_wall_h")
+
+[node name="Bottom" type="CollisionShape2D" parent="Walls"]
+position = Vector2(480, 532)
+shape = SubResource("Shape_wall_h")
+
+[node name="Left" type="CollisionShape2D" parent="Walls"]
+position = Vector2(8, 270)
+shape = SubResource("Shape_wall_v")
+
+[node name="Right" type="CollisionShape2D" parent="Walls"]
+position = Vector2(952, 270)
+shape = SubResource("Shape_wall_v")
+
+[node name="SpawnA" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(440, 430)
+
+[node name="SpawnB" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(520, 430)
+
+[node name="SafeReturn" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(480, 430)
+
+[node name="Arrival" type="Marker2D" parent="."]
+position = Vector2(480, 470)
+
+[node name="Actors" type="Node2D" parent="."]
+unique_name_in_owner = true
+y_sort_enabled = true
+
+[node name="MilestoneBoard" parent="Actors" instance=ExtResource("5_board")]
+position = Vector2(300, 430)
+
+[node name="crank" parent="Actors" instance=ExtResource("7_crank")]
+position = Vector2(560, 250)
+
+[node name="bed" parent="Actors" instance=ExtResource("6_bed")]
+position = Vector2(660, 430)
+
+[node name="DoorOut" parent="Actors" instance=ExtResource("4_door")]
+position = Vector2(480, 500)
+to_scene = "beach"
+to_name = "the yard"
+
+[node name="Camera" type="Camera2D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_camera")

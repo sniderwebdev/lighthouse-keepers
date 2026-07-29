@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RecipeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/recipe_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = "chowder"
+inputs = {"TODO_CONTENT": 1}
+output_id = "chowder"
+output_count = 1
+station = "stove"
+unlock_flag = "crab_taught_chowder"

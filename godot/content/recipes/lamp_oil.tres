@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RecipeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/recipe_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = "lamp_oil"
+inputs = {"kelp": 2, "fish_stub": 1}
+output_id = "lamp_oil"
+output_count = 1
+station = "workbench"
+unlock_flag = ""

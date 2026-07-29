@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #17141f; }
+  a { color: #f2c14e; }
+  a:hover { color: #ffd97a; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:48px;display:flex;flex-direction:column;align-items:flex-start;width:max-content;gap:18px;font-family:'Space Grotesk',system-ui,sans-serif;font-weight:500;">
+
+  <div style="width:1280px;height:720px;box-sizing:content-box;position:relative;overflow:hidden;background:#1f1b29;border:4px solid #4d4560;">
+
+    <!-- ==== gameplay behind (dimmed) ==== -->
+    <div style="position:absolute;inset:0;">
+      <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+        <div style="flex:3;background:#241d47;"></div>
+        <div style="flex:1;background:#33265a;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:10px;background-image:linear-gradient(45deg,#241d47 25%,transparent 25%,transparent 75%,#241d47 75%),linear-gradient(45deg,#241d47 25%,transparent 25%,transparent 75%,#241d47 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+        <div style="flex:1.4;background:#47336d;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:10px;background-image:linear-gradient(45deg,#33265a 25%,transparent 25%,transparent 75%,#33265a 75%),linear-gradient(45deg,#33265a 25%,transparent 25%,transparent 75%,#33265a 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+      </div>
+      <!-- tower interior: back wall planks -->
+      <div style="position:absolute;left:0;right:0;top:0;height:470px;background:#322c3d;">
+        <div style="position:absolute;inset:0;display:flex;">
+          <div style="flex:1;border-right:3px solid #2a2534;"></div>
+          <div style="flex:1;border-right:3px solid #2a2534;"></div>
+          <div style="flex:1;border-right:3px solid #2a2534;"></div>
+          <div style="flex:1;border-right:3px solid #2a2534;"></div>
+          <div style="flex:1;border-right:3px solid #2a2534;"></div>
+          <div style="flex:1;border-right:3px solid #2a2534;"></div>
+          <div style="flex:1;border-right:3px solid #2a2534;"></div>
+          <div style="flex:1;"></div>
+        </div>
+        <!-- window with dusk sea -->
+        <div style="position:absolute;left:132px;top:96px;width:196px;height:150px;background:#241d47;border:8px solid #3a3347;">
+          <div style="position:absolute;left:0;right:0;bottom:0;height:52px;background:#244b58;"></div>
+          <div style="position:absolute;left:0;right:0;bottom:52px;height:8px;background-image:linear-gradient(45deg,#2c5d6b 25%,transparent 25%,transparent 75%,#2c5d6b 75%),linear-gradient(45deg,#2c5d6b 25%,transparent 25%,transparent 75%,#2c5d6b 75%);background-size:8px 8px;background-position:0 0,4px 4px;"></div>
+          <div style="position:absolute;left:50%;top:0;width:6px;height:100%;background:#3a3347;"></div>
+        </div>
+        <!-- workbench -->
+        <div style="position:absolute;right:120px;top:300px;width:300px;height:26px;background:#453c4a;border:3px solid #3a3347;"></div>
+        <div style="position:absolute;right:150px;top:326px;width:16px;height:144px;background:#3a3340;"></div>
+        <div style="position:absolute;right:404px;top:326px;width:16px;height:144px;background:#3a3340;"></div>
+        <!-- crates -->
+        <div style="position:absolute;right:170px;top:246px;width:56px;height:56px;background:#3a3340;border:3px solid #453c4a;"></div>
+        <div style="position:absolute;right:250px;top:262px;width:40px;height:40px;background:#3a3340;border:3px solid #453c4a;"></div>
+      </div>
+      <!-- floor -->
+      <div style="position:absolute;left:0;right:0;top:470px;bottom:0;background:#2a2534;">
+        <div style="position:absolute;left:0;right:0;top:0;height:12px;background-image:linear-gradient(45deg,#322c3d 25%,transparent 25%,transparent 75%,#322c3d 75%),linear-gradient(45deg,#322c3d 25%,transparent 25%,transparent 75%,#322c3d 75%);background-size:8px 8px;background-position:0 0,4px 4px;"></div>
+      </div>
+      <!-- second keeper (B) idling by the bench -->
+      <div style="position:absolute;right:250px;top:392px;width:34px;height:78px;background:#3a3347;">
+        <div style="position:absolute;left:0;right:0;top:0;height:14px;background:#c14a3d;"></div>
+      </div>
+    </div>
+
+    <!-- dim scrim: flat fill + dither, no gradient -->
+    <div style="position:absolute;inset:0;background:#191536;opacity:0.62;"></div>
+    <div style="position:absolute;inset:0;opacity:0.5;background-image:linear-gradient(45deg,#1f1b29 25%,transparent 25%,transparent 75%,#1f1b29 75%),linear-gradient(45deg,#1f1b29 25%,transparent 25%,transparent 75%,#1f1b29 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div>
+
+    <!-- ==== overlay header ==== -->
+    <div style="position:absolute;left:56px;top:36px;display:flex;align-items:center;gap:14px;">
+      <div style="width:14px;height:28px;background:#f2c14e;"></div>
+      <div style="font-size:20px;font-weight:700;letter-spacing:4px;color:#ece2d0;">CRAFTING</div>
+      <div style="width:3px;height:20px;background:#565070;"></div>
+      <div style="font-size:16px;letter-spacing:2px;color:#ab6a85;">KEEPER A &#183; AT THE BENCH</div>
+    </div>
+    <div style="position:absolute;right:56px;top:36px;display:flex;align-items:center;gap:18px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:18px;height:18px;background:#3f818b;border:3px solid #244b58;"></div>
+        <div style="font-size:16px;color:#ece2d0;">KELP <span style="color:#82558a;">12</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:18px;height:18px;background:#61437e;border:3px solid #47336d;"></div>
+        <div style="font-size:16px;color:#ece2d0;">DRIFTWOOD <span style="color:#82558a;">7</span></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:18px;height:18px;background:#d98d78;border:3px solid #ab6a85;"></div>
+        <div style="font-size:16px;color:#ece2d0;">BRASS <span style="color:#c0473b;">0</span></div>
+      </div>
+    </div>
+
+    <!-- ==== radial wheel ==== -->
+    <!-- hub ring -->
+    <div style="position:absolute;left:545px;top:200px;width:190px;height:190px;border-radius:50%;border:3px dashed #4d4560;"></div>
+    <!-- keeper at center -->
+    <div style="position:absolute;left:604px;top:241px;width:72px;height:108px;background:#3a3340;border:3px solid #4d4560;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;padding-bottom:8px;">
+      <div style="position:absolute;left:0;top:0;width:20px;height:20px;background:#f2c14e;"></div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:#82558a;">keeper</div>
+      <div style="font-family:ui-monospace,monospace;font-size:11px;color:#82558a;">sprite</div>
+    </div>
+
+    <!-- N -->
+    <div style="position:absolute;left:598px;top:103px;width:84px;height:84px;background:#3a3340;border:3px solid #4d4560;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+      <div style="width:26px;height:26px;background:#61437e;border:3px solid #47336d;"></div>
+      <div style="font-size:13px;letter-spacing:1px;color:#ab6a85;">ROPE COIL</div>
+    </div>
+    <!-- NW -->
+    <div style="position:absolute;left:453px;top:108px;width:84px;height:84px;background:#322c3d;border:3px solid #4d4560;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+      <div style="width:26px;height:26px;background:#3a3347;border:3px solid #4d4560;"></div>
+      <div style="font-size:16px;font-weight:700;color:#565070;">???</div>
+    </div>
+    <!-- W -->
+    <div style="position:absolute;left:448px;top:253px;width:84px;height:84px;background:#3a3340;border:3px solid #4d4560;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+      <div style="width:26px;height:26px;background:#3f818b;border:3px solid #244b58;"></div>
+      <div style="font-size:13px;letter-spacing:1px;color:#ab6a85;">KELP NET</div>
+    </div>
+    <!-- SW -->
+    <div style="position:absolute;left:453px;top:398px;width:84px;height:84px;background:#322c3d;border:3px solid #4d4560;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+      <div style="width:26px;height:26px;background:#3a3347;border:3px solid #4d4560;"></div>
+      <div style="font-size:16px;font-weight:700;color:#565070;">???</div>
+    </div>
+    <!-- S -->
+    <div style="position:absolute;left:598px;top:403px;width:84px;height:84px;background:#3a3340;border:3px solid #4d4560;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+      <div style="width:26px;height:26px;background:#2f4a38;border:3px solid #3d5f4c;"></div>
+      <div style="font-size:13px;letter-spacing:1px;color:#ab6a85;">CRAB TRAP</div>
+    </div>
+    <!-- SE -->
+    <div style="position:absolute;left:743px;top:398px;width:84px;height:84px;background:#3a3340;border:3px solid #4d4560;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+      <div style="width:26px;height:26px;background:#453c4a;border:3px solid #565070;"></div>
+      <div style="font-size:13px;letter-spacing:1px;color:#ab6a85;">PLANK</div>
+    </div>
+    <!-- E -->
+    <div style="position:absolute;left:743px;top:253px;width:84px;height:84px;background:#3a3340;border:3px solid #4d4560;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;">
+      <div style="width:26px;height:26px;background:#ece2d0;border:3px solid #82558a;"></div>
+      <div style="font-size:12px;letter-spacing:0.5px;white-space:nowrap;color:#ab6a85;">GLASS PANE</div>
+    </div>
+
+    <!-- NE : SELECTED / FOCUSED -->
+    <div style="position:absolute;left:725px;top:90px;width:120px;height:120px;">
+      <div style="position:absolute;inset:-12px;border:4px solid #ffd97a;background-image:linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%),linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div>
+      <div style="position:absolute;inset:0;box-sizing:border-box;background:#453c4a;border:4px solid #fff3c4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;">
+        <div style="width:38px;height:38px;background:#f6c752;border:3px solid #ffd97a;"></div>
+        <div style="font-size:15px;font-weight:700;letter-spacing:1px;color:#fff3c4;">LANTERN OIL</div>
+      </div>
+    </div>
+    <!-- stick direction indicator: hub → selected slot -->
+    <div style="position:absolute;left:688px;top:250px;width:10px;height:10px;background:#82558a;"></div>
+    <div style="position:absolute;left:704px;top:232px;width:12px;height:12px;background:#d98d78;"></div>
+    <div style="position:absolute;left:722px;top:212px;width:14px;height:14px;background:#f2c14e;"></div>
+
+    <!-- ==== recipe panel beneath the wheel ==== -->
+    <div style="position:absolute;left:296px;top:500px;width:688px;box-sizing:border-box;background:#3a3340;border:4px solid #565070;padding:14px 24px;display:flex;gap:24px;align-items:stretch;">
+      <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="font-size:24px;font-weight:700;letter-spacing:1px;color:#fff3c4;">LANTERN OIL</div>
+          <div style="height:20px;padding:0 8px;display:flex;align-items:center;background:#453c4a;border:3px solid #4d4560;font-size:13px;letter-spacing:1px;color:#ab6a85;">&#215;2 PER BATCH</div>
+        </div>
+        <div style="font-size:17px;line-height:1.45;color:#ece2d0;text-wrap:pretty;max-width:400px;">Burns slow and low. Smells of the shore at the turn of the tide.</div>
+      </div>
+
+      <div style="width:4px;background:#4d4560;"></div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-size:14px;letter-spacing:3px;color:#82558a;">COSTS</div>
+        <div style="display:flex;gap:12px;">
+          <div style="height:46px;box-sizing:border-box;padding:0 14px;display:flex;align-items:center;gap:10px;background:#453c4a;border:3px solid #4d4560;">
+            <div style="width:22px;height:22px;background:#3f818b;border:3px solid #244b58;"></div>
+            <div style="font-size:18px;font-weight:600;color:#ece2d0;">3</div>
+          </div>
+          <div style="height:46px;box-sizing:border-box;padding:0 14px;display:flex;align-items:center;gap:10px;background:#453c4a;border:3px solid #4d4560;">
+            <div style="width:22px;height:22px;background:#61437e;border:3px solid #47336d;"></div>
+            <div style="font-size:18px;font-weight:600;color:#ece2d0;">2</div>
+          </div>
+          <div style="height:46px;box-sizing:border-box;padding:0 14px;display:flex;align-items:center;gap:10px;background:#3a3340;border:3px solid #c0473b;">
+            <div style="width:22px;height:22px;background:#d98d78;border:3px solid #c0473b;"></div>
+            <div style="font-size:18px;font-weight:600;color:#c14a3d;">1</div>
+          </div>
+        </div>
+        <div style="font-size:14px;letter-spacing:1px;color:#c14a3d;">NEEDS 1 BRASS &#183; ASK KEEPER B</div>
+      </div>
+    </div>
+
+    <!-- ==== hint bar ==== -->
+    <div style="position:absolute;left:0;right:0;bottom:0;height:60px;background:#241d47;border-top:4px solid #4d4560;display:flex;align-items:center;gap:36px;padding:0 56px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#453c4a;border:3px solid #565070;display:flex;align-items:center;justify-content:center;font-size:15px;color:#ece2d0;">A</div>
+        <div style="font-size:16px;color:#ece2d0;letter-spacing:1px;">CRAFT</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#453c4a;border:3px solid #565070;display:flex;align-items:center;justify-content:center;font-size:15px;color:#ece2d0;">B</div>
+        <div style="font-size:16px;color:#ece2d0;letter-spacing:1px;">CLOSE WHEEL</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#453c4a;border:3px solid #565070;display:flex;align-items:center;justify-content:center;font-size:15px;color:#ece2d0;">Y</div>
+        <div style="font-size:16px;color:#ece2d0;letter-spacing:1px;">MENU</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#453c4a;border:3px solid #565070;display:flex;align-items:center;justify-content:center;"><div style="width:12px;height:12px;border-radius:50%;background:#565070;"></div></div>
+        <div style="font-size:16px;color:#ece2d0;letter-spacing:1px;">STICK / D&#8211;PAD AIMS THE WHEEL</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="width:1288px;box-sizing:border-box;display:flex;gap:14px;align-items:baseline;font-family:ui-monospace,monospace;font-size:13px;color:#82558a;">
+    <div style="color:#f2c14e;">D&#8211;PAD ORDER</div>
+    <div style="color:#ab6a85;">Direction maps 1:1 to compass slots &#8212; &#9650; ROPE COIL, &#9656; GLASS PANE, &#9662; CRAB TRAP, &#9666; KELP NET, diagonals for LANTERN OIL / PLANK / the two locked slots. Releasing to center keeps the last slot selected; no wrap, no cursor.</div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1380,&quot;height&quot;:840}}"></script>
+</body>
+</html>

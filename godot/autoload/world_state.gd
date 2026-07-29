@@ -11,7 +11,19 @@ var tide := { "phase": "LOW", "t": 0.0, "cycle": 0, "storm": false }
 var flags: Dictionary = {}        # flag -> bool
 var inventory: Dictionary = {}    # item_id -> int
 var milestones: Dictionary = {}   # milestone_id -> "todo"|"in_progress"|"done"
+## node_id -> is there anything there to pick up. Authoritative: a node only
+## empties or restocks because the server said so, never because we took it.
+var nodes: Dictionary = {}
+## bottle_id -> "washed_up" | "read". Absent means the sea has not brought it.
+var bottles: Dictionary = {}
+## npc_id -> how many stages of theirs you have had.
+var npcs: Dictionary = {}
+## The keeper's log, oldest first. A keepsake, so nothing is ever dropped.
+var log_entries: Array = []
 var presence: Dictionary = {}     # keeper_id -> bool
+## slot -> ms of slow walk left when the message arrived. Transient: the world
+## never remembers that somebody got wet, it only knows they are wet now.
+var caught: Dictionary = {}
 
 ## Called by Net when an authoritative diff arrives. A diff may contain any
 ## subset of keys; we apply only what's present and emit granular signals.
@@ -19,12 +31,29 @@ func apply_diff(diff: Dictionary) -> void:
 	if diff.has("tide"):
 		var old_phase: String = tide.get("phase", "")
 		tide.merge(diff["tide"], true)
+		# Progress fires on every update; tide_changed stays the "the phase
+		# flipped" signal that gameplay reacts to.
+		EventBus.tide_progressed.emit(
+			tide.get("phase", ""), tide.get("t", 0.0), int(tide.get("cycle", 0))
+		)
 		if tide.get("phase", "") != old_phase:
 			EventBus.tide_changed.emit(tide["phase"], tide.get("t", 0.0))
 
 	if diff.has("inventory"):
+		# Apply the WHOLE diff before telling anyone about any of it. A craft
+		# arrives as one message carrying both the spend and the gain; emitting as
+		# we went would let a listener read a basket that had paid for a patch kit
+		# it had not been handed yet.
+		var touched: Array = []
 		for item_id in diff["inventory"]:
 			inventory[item_id] = diff["inventory"][item_id]
+			touched.append(item_id)
+		var batch: Dictionary = {}
+		for item_id in touched:
+			batch[item_id] = inventory[item_id]
+		if not batch.is_empty():
+			EventBus.inventory_batch_applied.emit(batch)
+		for item_id in touched:
 			EventBus.inventory_changed.emit(item_id, inventory[item_id])
 
 	if diff.has("flags"):
@@ -34,19 +63,63 @@ func apply_diff(diff: Dictionary) -> void:
 			if f == "lamp_lit" and flags[f] == true:
 				EventBus.lamp_lit.emit()   # the climax
 
+	if diff.has("nodes"):
+		for node_id in diff["nodes"]:
+			nodes[node_id] = bool(diff["nodes"][node_id])
+			EventBus.node_changed.emit(node_id, nodes[node_id])
+
+	if diff.has("bottles"):
+		for bottle_id in diff["bottles"]:
+			bottles[bottle_id] = String(diff["bottles"][bottle_id])
+			EventBus.bottle_changed.emit(bottle_id, bottles[bottle_id])
+
+	if diff.has("npcs"):
+		for npc_id in diff["npcs"]:
+			npcs[npc_id] = int(diff["npcs"][npc_id])
+			EventBus.npc_stage_changed.emit(npc_id, npcs[npc_id])
+
+	if diff.has("log"):
+		log_entries = diff["log"]
+		EventBus.log_changed.emit(log_entries)
+
 	if diff.has("milestones"):
 		for m in diff["milestones"]:
 			milestones[m] = diff["milestones"][m]
 			EventBus.milestone_changed.emit(m, milestones[m])
+
+	if diff.has("tandem"):
+		var t: Dictionary = diff["tandem"]
+		EventBus.tandem_waiting.emit(
+			String(t.get("gate_id", "")), PackedStringArray(t.get("waiting", []))
+		)
 
 	if diff.has("presence"):
 		for k in diff["presence"]:
 			presence[k] = diff["presence"][k]
 			EventBus.keeper_presence_changed.emit(k, presence[k])
 
+	if diff.has("caught"):
+		for slot in diff["caught"]:
+			var remaining_ms: int = int(diff["caught"][slot])
+			if remaining_ms > 0:
+				caught[slot] = remaining_ms
+				EventBus.keeper_caught.emit(slot, float(remaining_ms) / 1000.0)
+			else:
+				caught.erase(slot)
+				EventBus.keeper_released.emit(slot)
+
 # --- read helpers ---
 func has_flag(flag: String) -> bool:
 	return flags.get(flag, false) == true
+
+func bottle_state(bottle_id: String) -> String:
+	return String(bottles.get(bottle_id, ""))
+
+func npc_stage(npc_id: String) -> int:
+	return int(npcs.get(npc_id, 0))
+
+func node_ready(node_id: String) -> bool:
+	return nodes.get(node_id, true) == true
 
 func count(item_id: String) -> int:
 	return int(inventory.get(item_id, 0))

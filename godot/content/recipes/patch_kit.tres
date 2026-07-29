@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="RecipeDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/recipe_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = "patch_kit"
+inputs = {"driftwood": 3, "kelp": 1}
+output_id = "patch_kit"
+output_count = 1
+station = "workbench"
+unlock_flag = ""

@@ -2,44 +2,101 @@ extends Node
 class_name TideClock
 ## TideClock — presentation only.
 ##
-## The AUTHORITATIVE tide lives in the Nakama match and arrives via WorldState
-## (phase + normalized t + cycle length). The server only sends discrete updates;
-## this node interpolates between them every frame so the water animates smoothly
-## and shore colliders open/close at the right moment. It never decides the tide.
+## The AUTHORITATIVE tide lives in the Nakama match and arrives via WorldState.
+## The server sends discrete updates; this node carries t forward between them at
+## the same rate the server uses, so the sky changes every frame instead of
+## lurching once a broadcast. It never decides the tide: every server message is
+## a correction it accepts.
 ##
-## Attach to your shore scene. Drive water visuals from `water_level` (0..1).
+## Drives the ambient tint through DuskRamp — which IS the tide UI (DESIGN §2).
 
 signal water_level_changed(level: float)   # 0.0 = lowest, 1.0 = highest
+signal ambient_changed(color: Color)       # the sky's colour, on the world
+signal phase_changed(phase: String)
 
-@export var seconds_per_cycle := 480.0      # mirror the match's cycle length
+## Mirror of SECONDS_PER_CYCLE in match_handler.ts.
+const SECONDS_PER_CYCLE := 480.0
+## A correction bigger than this is a jump — a join, or a dev tide set — and is
+## taken at once rather than eased into.
+const SNAP_THRESHOLD := 0.02
+const CORRECTION_RATE := 0.5
 
-var water_level := 0.0
-var _phase := "LOW"
-var _phase_t := 0.0      # 0..1 progress through current phase, from server
+## Where the water sits through the cycle. LOW is t=0, HIGH is t=0.5.
+const LOW_LEVEL := 0.05
+const HIGH_LEVEL := 0.95
 
-# Target water level per phase (LOW lowest -> HIGH highest); STORM rides high.
-const PHASE_LEVEL := {
-	"LOW": 0.05, "MID": 0.5, "HIGH": 0.95, "STORM": 1.0
-}
+## Mirror of the server's phase table: four quarters, LOW MID HIGH MID.
+const PHASES: PackedStringArray = ["LOW", "MID", "HIGH", "MID"]
+
+@export var apply_to: NodePath      ## optional CanvasModulate to tint
+
+var t := 0.0
+var cycle := 0
+var phase := "LOW"
+var water_level := LOW_LEVEL
+
+var _canvas: CanvasModulate
+var _last_ambient := Color(0, 0, 0, 0)
 
 func _ready() -> void:
-	EventBus.tide_changed.connect(_on_tide_changed)
+	if apply_to != NodePath():
+		_canvas = get_node_or_null(apply_to) as CanvasModulate
+	# Progress, not just phase flips: a correction that only arrives four times a
+	# cycle would let this clock free-run for two minutes at a stretch.
+	EventBus.tide_progressed.connect(_on_tide_progressed)
 	_sync_from_world()
+	_apply()
 
 func _sync_from_world() -> void:
-	_phase = WorldState.tide.get("phase", "LOW")
-	_phase_t = WorldState.tide.get("t", 0.0)
+	t = float(WorldState.tide.get("t", 0.0))
+	cycle = int(WorldState.tide.get("cycle", 0))
+	phase = String(WorldState.tide.get("phase", "LOW"))
 
-func _on_tide_changed(phase: String, t: float) -> void:
-	_phase = phase
-	_phase_t = t
+func _on_tide_progressed(p_phase: String, p_t: float, p_cycle: int) -> void:
+	_correct_to(p_t)
+	cycle = p_cycle
+	if p_phase != phase:
+		phase = p_phase
+		phase_changed.emit(phase)
+	_apply()
+
+func _correct_to(server_t: float) -> void:
+	var gap := absf(server_t - t)
+	# Across the wrap point the short way round is the other way.
+	if gap > 0.5:
+		gap = 1.0 - gap
+	if gap >= SNAP_THRESHOLD:
+		t = server_t
+	else:
+		t = lerpf(t, server_t, CORRECTION_RATE)
 
 func _process(delta: float) -> void:
-	# Smoothly chase the authoritative target. Server corrections snap us back if
-	# we drift; between them we just ease toward the phase's target level.
-	var target: float = PHASE_LEVEL.get(_phase, 0.5)
-	water_level = lerp(water_level, target, clamp(delta * 1.5, 0.0, 1.0))
+	# Carry the tide forward at the server's rate. When nobody is connected the
+	# server's clock is paused — and so is this one, because there is no client
+	# running to advance it.
+	t = fposmod(t + delta / SECONDS_PER_CYCLE, 1.0)
+
+	var next_phase := _phase_for(t)
+	if next_phase != phase:
+		phase = next_phase
+		phase_changed.emit(phase)
+	_apply()
+
+func _phase_for(p_t: float) -> String:
+	return PHASES[int(p_t * PHASES.size()) % PHASES.size()]
+
+func _apply() -> void:
+	# Water rides a triangle: lowest at t=0, highest at t=0.5.
+	var rise := 1.0 - 2.0 * absf(t - 0.5)
+	water_level = lerpf(LOW_LEVEL, HIGH_LEVEL, rise)
 	water_level_changed.emit(water_level)
+
+	var ambient := DuskRamp.ambient_for(t)
+	if ambient != _last_ambient:
+		_last_ambient = ambient
+		if _canvas != null:
+			_canvas.color = ambient
+		ambient_changed.emit(ambient)
 
 ## Gameplay query: is a shore tile of given height currently submerged?
 func is_submerged(tile_height: float) -> bool:

@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BottleDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/bottle_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = "bottle_03"
+chapter = 3
+text_key = "TODO_CONTENT_bottle_03"
+sets_flag = "read_bottle_03"
+requires_flag = "read_bottle_02"
+spawn_weight = 1.0
+min_tide_cycle = 2
