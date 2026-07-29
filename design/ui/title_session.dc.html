@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  body { margin: 0; background: #17141f; }
+  a { color: #f2c14e; }
+  a:hover { color: #ffd97a; }
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:48px;display:flex;flex-direction:column;align-items:flex-start;width:max-content;gap:18px;font-family:'Space Grotesk',system-ui,sans-serif;font-weight:500;">
+
+  <div style="width:1280px;height:720px;position:relative;overflow:hidden;background:#1f1b29;border:4px solid #4d4560;image-rendering:pixelated;">
+
+    <!-- sky ramp: flat bands, dithered seams -->
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;">
+      <div style="flex:2;background:#191536;"></div>
+      <div style="flex:1.6;background:#241d47;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:10px;background-image:linear-gradient(45deg,#191536 25%,transparent 25%,transparent 75%,#191536 75%),linear-gradient(45deg,#191536 25%,transparent 25%,transparent 75%,#191536 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+      <div style="flex:1.4;background:#33265a;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:10px;background-image:linear-gradient(45deg,#241d47 25%,transparent 25%,transparent 75%,#241d47 75%),linear-gradient(45deg,#241d47 25%,transparent 25%,transparent 75%,#241d47 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+      <div style="flex:1.1;background:#47336d;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:10px;background-image:linear-gradient(45deg,#33265a 25%,transparent 25%,transparent 75%,#33265a 75%),linear-gradient(45deg,#33265a 25%,transparent 25%,transparent 75%,#33265a 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+      <div style="flex:0.9;background:#61437e;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:8px;background-image:linear-gradient(45deg,#47336d 25%,transparent 25%,transparent 75%,#47336d 75%),linear-gradient(45deg,#47336d 25%,transparent 25%,transparent 75%,#47336d 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+      <div style="flex:0.7;background:#82558a;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:8px;background-image:linear-gradient(45deg,#61437e 25%,transparent 25%,transparent 75%,#61437e 75%),linear-gradient(45deg,#61437e 25%,transparent 25%,transparent 75%,#61437e 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+      <div style="flex:0.5;background:#ab6a85;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:8px;background-image:linear-gradient(45deg,#82558a 25%,transparent 25%,transparent 75%,#82558a 75%),linear-gradient(45deg,#82558a 25%,transparent 25%,transparent 75%,#82558a 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+      <div style="flex:0.42;background:#d98d78;position:relative;"><div style="position:absolute;left:0;right:0;top:0;height:6px;background-image:linear-gradient(45deg,#ab6a85 25%,transparent 25%,transparent 75%,#ab6a85 75%),linear-gradient(45deg,#ab6a85 25%,transparent 25%,transparent 75%,#ab6a85 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div></div>
+      <div style="flex:0.3;background:#f2ae80;"></div>
+    </div>
+
+    <!-- sea -->
+    <div style="position:absolute;left:0;right:0;bottom:150px;height:100px;background:#244b58;">
+      <div style="position:absolute;left:0;right:0;top:0;height:10px;background-image:linear-gradient(45deg,#35707c 25%,transparent 25%,transparent 75%,#35707c 75%),linear-gradient(45deg,#35707c 25%,transparent 25%,transparent 75%,#35707c 75%);background-size:8px 8px;background-position:0 0,4px 4px;"></div>
+      <div style="position:absolute;left:0;right:0;top:34px;height:8px;background-image:linear-gradient(45deg,#2c5d6b 25%,transparent 25%,transparent 75%,#2c5d6b 75%),linear-gradient(45deg,#2c5d6b 25%,transparent 25%,transparent 75%,#2c5d6b 75%);background-size:8px 8px;background-position:0 0,4px 4px;"></div>
+    </div>
+
+    <!-- lighthouse beam (flat, hard-edged) -->
+    <div style="position:absolute;left:518px;top:225px;width:640px;height:260px;opacity:0.09;background:#fff3c4;clip-path:polygon(100% 46%,100% 54%,0 100%,0 0);"></div>
+    <div style="position:absolute;left:758px;top:274px;width:400px;height:162px;opacity:0.13;background:#fff3c4;clip-path:polygon(100% 44%,100% 56%,0 100%,0 0);"></div>
+    <div style="position:absolute;left:958px;top:315px;width:200px;height:80px;opacity:0.22;background:#f6c752;clip-path:polygon(100% 38%,100% 62%,0 100%,0 0);"></div>
+    <div style="position:absolute;left:1112px;top:335px;width:46px;height:40px;opacity:0.5;background:#ffd97a;clip-path:polygon(100% 25%,100% 75%,0 100%,0 0);"></div>
+
+    <!-- headland + lighthouse silhouette -->
+    <div style="position:absolute;right:96px;bottom:236px;width:52px;height:132px;background:#1f1b29;clip-path:polygon(18% 0,82% 0,100% 100%,0 100%);"></div>
+    <div style="position:absolute;right:100px;bottom:352px;width:44px;height:26px;background:#322c3d;border-top:4px solid #1f1b29;"></div>
+    <div style="position:absolute;right:108px;bottom:358px;width:28px;height:14px;background:#f6c752;"></div>
+    <div style="position:absolute;right:104px;bottom:378px;width:36px;height:14px;background:#1f1b29;clip-path:polygon(50% 0,100% 100%,0 100%);"></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:250px;background:#1f1b29;clip-path:polygon(0 42%,140px 34%,320px 40%,520px 30%,700px 36%,900px 24%,1060px 30%,1180px 20%,1280px 26%,1280px 100%,0 100%);"></div>
+    <div style="position:absolute;left:0;right:0;bottom:250px;height:14px;background-image:linear-gradient(45deg,#1f1b29 25%,transparent 25%,transparent 75%,#1f1b29 75%),linear-gradient(45deg,#1f1b29 25%,transparent 25%,transparent 75%,#1f1b29 75%);background-size:6px 6px;background-position:0 0,3px 3px;opacity:0.55;"></div>
+
+    <!-- title -->
+    <div style="position:absolute;left:72px;top:56px;display:flex;flex-direction:column;gap:14px;">
+      <div style="font-size:15px;font-weight:500;letter-spacing:6px;color:#ab6a85;">A COZY TWO&#8211;KEEPER TALE</div>
+      <div style="font-weight:700;font-size:54px;line-height:1.1;letter-spacing:-0.5px;color:#ece2d0;">THE LIGHTHOUSE<br />KEEPERS</div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:220px;height:4px;background:#61437e;"></div>
+        <div style="width:10px;height:10px;background:#82558a;"></div>
+        <div style="width:40px;height:4px;background:#61437e;"></div>
+      </div>
+    </div>
+
+    <!-- main menu: 3 stacked options -->
+    <div style="position:absolute;left:72px;top:228px;display:flex;flex-direction:column;gap:10px;width:352px;">
+
+      <div style="position:relative;">
+        <sc-if value="{{ fContinue }}" hint-placeholder-val="{{ true }}">
+          <div style="position:absolute;inset:-12px;border:4px solid #ffd97a;background-image:linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%),linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div>
+        </sc-if>
+        <div style="position:relative;box-sizing:border-box;width:100%;height:52px;display:flex;align-items:center;gap:16px;padding:0 18px;background:#453c4a;border:3px solid #565070;">
+          <div style="width:14px;height:18px;background:#f2c14e;clip-path:polygon(0 0,100% 50%,0 100%);"></div>
+          <div style="font-size:22px;color:#fff3c4;letter-spacing:2px;">CONTINUE</div>
+          <div style="margin-left:auto;font-size:14px;color:#d98d78;letter-spacing:1px;">DAY 4</div>
+        </div>
+      </div>
+
+      <div style="position:relative;">
+        <sc-if value="{{ fNew }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:-12px;border:4px solid #ffd97a;background-image:linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%),linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div>
+        </sc-if>
+        <div style="position:relative;height:52px;display:flex;align-items:center;padding:0 20px 0 50px;background:#3a3340;border:3px solid #4d4560;">
+          <div style="font-size:22px;color:#ece2d0;letter-spacing:2px;">NEW VOYAGE</div>
+        </div>
+      </div>
+
+      <div style="position:relative;">
+        <sc-if value="{{ fSettings }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:-12px;border:4px solid #ffd97a;background-image:linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%),linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div>
+        </sc-if>
+        <div style="position:relative;height:52px;display:flex;align-items:center;padding:0 20px 0 50px;background:#3a3340;border:3px solid #4d4560;">
+          <div style="font-size:22px;color:#ece2d0;letter-spacing:2px;">SETTINGS</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- session setup strip -->
+    <div style="position:absolute;left:72px;right:72px;bottom:76px;background:#3a3340;border:4px solid #565070;display:flex;align-items:stretch;">
+
+      <!-- world code -->
+      <div style="position:relative;padding:20px 26px;display:flex;flex-direction:column;gap:14px;">
+        <div style="font-size:15px;letter-spacing:3px;color:#82558a;">WORLD CODE</div>
+        <sc-if value="{{ fCode }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:8px;border:4px solid #ffd97a;background-image:linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%),linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div>
+        </sc-if>
+        <div style="position:relative;display:flex;gap:8px;">
+          <div style="width:46px;height:58px;background:#453c4a;border:3px solid #4d4560;display:flex;align-items:center;justify-content:center;font-size:26px;color:#ece2d0;">H</div>
+          <div style="width:46px;height:58px;background:#453c4a;border:3px solid #4d4560;display:flex;align-items:center;justify-content:center;font-size:26px;color:#ece2d0;">A</div>
+          <div style="width:46px;height:58px;background:#453c4a;border:3px solid #4d4560;display:flex;align-items:center;justify-content:center;font-size:26px;color:#ece2d0;">R</div>
+          <div style="width:46px;height:58px;background:#453c4a;border:3px solid #4d4560;display:flex;align-items:center;justify-content:center;font-size:26px;color:#ece2d0;">B</div>
+          <div style="width:46px;height:58px;background:#453c4a;border:3px solid #ece2d0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;">
+            <div style="width:12px;height:8px;background:#82558a;clip-path:polygon(50% 0,100% 100%,0 100%);"></div>
+            <div style="font-size:22px;color:#ece2d0;">O</div>
+            <div style="width:12px;height:8px;background:#82558a;clip-path:polygon(50% 100%,100% 0,0 0);"></div>
+          </div>
+          <div style="width:46px;height:58px;background:#322c3d;border:3px dashed #4d4560;display:flex;align-items:center;justify-content:center;font-size:24px;color:#565070;">&#183;</div>
+        </div>
+        <div style="position:relative;font-size:14px;color:#61437e;letter-spacing:1px;">&#9650;&#9660; LETTER &nbsp; &#9668;&#9658; SLOT</div>
+      </div>
+
+      <div style="width:4px;background:#4d4560;"></div>
+
+      <!-- play mode -->
+      <div style="padding:20px 26px;display:flex;flex-direction:column;gap:14px;flex:1;">
+        <div style="font-size:15px;letter-spacing:3px;color:#82558a;">PLAY MODE</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div style="height:44px;display:flex;align-items:center;gap:14px;padding:0 16px;background:#453c4a;border:3px solid #ece2d0;">
+            <div style="width:16px;height:16px;background:#f2c14e;"></div>
+            <div style="font-size:18px;color:#fff3c4;letter-spacing:1px;">TOGETHER ON THIS COUCH</div>
+          </div>
+          <div style="height:44px;display:flex;align-items:center;gap:14px;padding:0 16px;background:#322c3d;border:3px solid #4d4560;">
+            <div style="width:16px;height:16px;background:#3a3347;border:2px solid #565070;"></div>
+            <div style="font-size:18px;color:#82558a;letter-spacing:1px;">ACROSS THE SEA</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:4px;background:#4d4560;"></div>
+
+      <!-- keeper slots -->
+      <div style="padding:20px 26px;display:flex;flex-direction:column;gap:14px;">
+        <div style="font-size:15px;letter-spacing:3px;color:#82558a;">YOUR KEEPER</div>
+        <div style="display:flex;gap:16px;">
+
+          <div style="position:relative;">
+            <sc-if value="{{ fKeeperA }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:-10px;border:4px solid #ffd97a;background-image:linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%),linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div>
+            </sc-if>
+            <div style="position:relative;width:112px;background:#453c4a;border:3px solid #ece2d0;display:flex;flex-direction:column;">
+              <div style="height:64px;background:#322c3d;background-image:linear-gradient(45deg,#3a3347 25%,transparent 25%,transparent 75%,#3a3347 75%),linear-gradient(45deg,#3a3347 25%,transparent 25%,transparent 75%,#3a3347 75%);background-size:6px 6px;background-position:0 0,3px 3px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;position:relative;">
+                <div style="position:absolute;top:0;left:0;width:16px;height:16px;background:#f2c14e;"></div>
+                <div style="font-family:monospace;font-size:11px;color:#82558a;">portrait</div>
+              </div>
+              <div style="height:28px;white-space:nowrap;display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff3c4;letter-spacing:2px;">A &#183; LAMP</div>
+            </div>
+          </div>
+
+          <div style="position:relative;">
+            <sc-if value="{{ fKeeperB }}" hint-placeholder-val="{{ false }}">
+              <div style="position:absolute;inset:-10px;border:4px solid #ffd97a;background-image:linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%),linear-gradient(45deg,#f6c752 25%,transparent 25%,transparent 75%,#f6c752 75%);background-size:6px 6px;background-position:0 0,3px 3px;"></div>
+            </sc-if>
+            <div style="position:relative;width:112px;background:#322c3d;border:3px solid #4d4560;display:flex;flex-direction:column;">
+              <div style="height:64px;background:#2a2534;background-image:linear-gradient(45deg,#322c3d 25%,transparent 25%,transparent 75%,#322c3d 75%),linear-gradient(45deg,#322c3d 25%,transparent 25%,transparent 75%,#322c3d 75%);background-size:6px 6px;background-position:0 0,3px 3px;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;position:relative;">
+                <div style="position:absolute;top:0;left:0;width:16px;height:16px;background:#c14a3d;"></div>
+                <div style="font-family:monospace;font-size:11px;color:#565070;">portrait</div>
+              </div>
+              <div style="height:28px;white-space:nowrap;display:flex;align-items:center;justify-content:center;font-size:14px;color:#82558a;letter-spacing:2px;">B &#183; ROPE</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- hint bar -->
+    <div style="position:absolute;left:0;right:0;bottom:0;height:60px;background:#241d47;border-top:4px solid #4d4560;display:flex;align-items:center;gap:36px;padding:0 76px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#453c4a;border:3px solid #565070;display:flex;align-items:center;justify-content:center;font-size:15px;color:#ece2d0;">A</div>
+        <div style="font-size:16px;color:#ece2d0;letter-spacing:1px;">CONFIRM</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#453c4a;border:3px solid #565070;display:flex;align-items:center;justify-content:center;font-size:15px;color:#ece2d0;">B</div>
+        <div style="font-size:16px;color:#ece2d0;letter-spacing:1px;">BACK</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:30px;height:30px;border-radius:50%;background:#453c4a;border:3px solid #565070;display:flex;align-items:center;justify-content:center;font-size:15px;color:#ece2d0;">Y</div>
+        <div style="font-size:16px;color:#ece2d0;letter-spacing:1px;">MENU</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto;">
+        <div style="position:relative;width:30px;height:30px;">
+          <div style="position:absolute;left:10px;top:0;width:10px;height:30px;background:#565070;"></div>
+          <div style="position:absolute;top:10px;left:0;width:30px;height:10px;background:#565070;"></div>
+        </div>
+        <div style="font-size:16px;color:#ece2d0;letter-spacing:1px;">MOVE FOCUS</div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="width:1288px;box-sizing:border-box;display:flex;gap:14px;align-items:baseline;font-family:monospace;font-size:13px;color:#82558a;">
+    <div style="color:#f2c14e;">D&#8211;PAD ORDER</div>
+    <div style="color:#ab6a85;">&#9660; walks CONTINUE &#8594; NEW VOYAGE &#8594; SETTINGS &#8594; WORLD CODE &#8594; PLAY MODE &#8594; KEEPER A &#8596; KEEPER B (&#9658; from keeper A); &#9650; reverses. 7 stops, no wrap; B returns focus to CONTINUE.</div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1380,&quot;height&quot;:840},&quot;focus&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;continue&quot;,&quot;new&quot;,&quot;settings&quot;,&quot;code&quot;,&quot;keeperA&quot;,&quot;keeperB&quot;],&quot;default&quot;:&quot;continue&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Controller focus&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const f = this.props.focus ?? "continue";
+    return {
+      fContinue: f === "continue",
+      fNew: f === "new",
+      fSettings: f === "settings",
+      fCode: f === "code",
+      fKeeperA: f === "keeperA",
+      fKeeperB: f === "keeperB",
+    };
+  }
+}
+
+</script>
+</body>
+</html>

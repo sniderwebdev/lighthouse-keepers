@@ -191,11 +191,100 @@ AC:
 - [ ] Fresh checkout + `docker compose up` + documented steps reproduces all of
       the above (see Runbook).
 
-## M8+ — Content sessions & Act 2 (post-slice)
+## POST-SLICE LADDER (re-planned after the M0–M7 report)
 
-Sessions 2–5 content pass (real sprites replacing placeholders, room dressing,
-remaining bottles), then Act 2 per DESIGN §7. Not planned in detail here on
-purpose — re-plan after the slice teaches us.
+Slice findings drive M8–M11. Standing order: merge `m0-boot-backbone` to main
+first (re-run the M7 AC checklist on the merge result before anything else).
+
+## M8 — Playtest build & feel tuning
+
+Nothing new; make the slice *playable and tunable by humans*.
+
+- Tuning overlay (debug menu, controller-nav like everything else): live-adjust
+  walk speed, camera smoothing, tide cycle length, radial deadzone. Values
+  persist to a local `tuning.cfg`; final numbers get committed as the new
+  defaults after playtests.
+- **Feel-test room**: a story-free scene (no bottles, no milestones, no crab)
+  with movement space, tide-gated zones, a test crank for tandem timing, and
+  props to weave around. This is the AUTHOR-AND-SPOUSE playtest space — it
+  exists so feel can be tuned together without spoiling Session 1–5 content.
+- Windows export preset + one-command build so playtests don't need the editor.
+- Test harness refactor (slice finding): autowalk routes target named
+  `TestMarker` nodes, never timed legs. Re-point existing routes.
+
+AC:
+- [ ] Full-content playthrough runs from a built .exe, not just the editor.
+- [ ] All four tuning values adjustable mid-session from a pad; a changed value
+      visibly applies within 1s; values survive relaunch.
+- [ ] Feel-test room contains zero story content (grep: no BottleDef,
+      MilestoneDef, or NPC references in its scene).
+- [ ] Moving any test-room prop 40px breaks no harness test.
+- [ ] At least one two-human playtest logged in `PLAYTESTS.md` (date, mode,
+      tuned values, top 3 friction notes). The author runs this; Claude prompts
+      for it and blocks M9 content-tuning tasks until the file has an entry.
+
+## M9 — Slice debt (the three real findings)
+
+- **The arrival** (fixes the empty first session): new worlds initialize with
+  scripted shore state at cycle 0 — wrecked crates of your own belongings on
+  the beach (narratively: what's left of the city life washing in), 1 bottle
+  pre-spawned, resource nodes pre-rolled. Implemented as an `arrival` spawn
+  table applied in `loadWorld()` when creating a fresh world. Session 1 must
+  have story in reach within 60 seconds of spawn.
+- **Keepers stay warm at HIGH tide** (DESIGN §6 law): keeper sprites exempted
+  from full ambient modulation + a small warm lantern halo that scales up as
+  the sky ramp darkens. The find-the-human-by-warmth law must hold in the
+  darkest phase.
+- **Bottle pacing**: bottles may also roll on phase boundaries (not just full
+  cycles) when a story flag is "hungry" (next chapter unlocked but unspawned),
+  so story never starves behind the tide clock.
+
+AC:
+- [ ] Fresh world: a readable bottle and gatherable arrival crates exist at
+      spawn; the "reach the story in 60s" walk is verified by harness.
+- [ ] Screenshot harness at HIGH tide: keeper sprite luminance stays within
+      warm-ramp range while environment drops; both keepers distinguishable.
+- [ ] With chapter 2 unlocked and unspawned, a bottle arrives within one phase,
+      not one cycle.
+
+## M10 — Sound & sight (parallel tracks)
+
+Audio track (direction now exists — keep it small):
+- Three ambient beds crossfaded by tide phase: sea+gulls (LOW), wind (MID/HIGH),
+  fire crackle inside the tower. ~10 one-shot SFX: gather, craft, place,
+  milestone-complete, bottle-open, page-turn, radial tick, tandem-ready, beam
+  ignition, caught-by-tide. One music decision deferred to the author:
+  none / single dusk theme / theme-per-act (prompt for it, don't pick).
+- Sources: CC0 packs (freesound, Sonniss GDC) quantity-limited to the list
+  above. No audio middleware; Godot buses (Master/Ambience/SFX) + settings
+  sliders.
+
+Art track (see ASSET_MANIFEST.md when added; keepers first):
+- Replace the two keeper stand-ins with real sprite sheets (idle/walk 4-dir +
+  gather), palette-locked, silhouette-distinct. Then tower interior tileset.
+  Everything else stays programmer art until M11.
+
+AC:
+- [ ] Ambience crossfades track phase flips on both clients; SFX fire on their
+      events in both play modes; sliders persist.
+- [ ] Keeper sheets pass the silhouette test (grayscale thumbnails at 50%
+      scale are still tellable-apart) and the palette check (no off-ramp hexes).
+
+## M11 — Content Sessions 2–5 (the real game)
+
+The Session 2–5 beats per DESIGN §7 in full: remaining milestones' visual
+states, crab stages, bottle chain (author writes final letters — TODO_CONTENT
+gates remain), beach dressing, room dressing, remaining icons. Exit criteria:
+a stranger-couple could play Act 1 start to finish without the editor, and the
+author has run the full five-session arc in couch mode.
+
+## Act 2 pre-decisions (locked now, implemented later)
+
+- **Zone authority**: Act 2 introduces coarse position truth — an `ENTER_ZONE`
+  command (opcode 9) marking which named zone each SLOT occupies. Enough to
+  validate "who is rowing" and boat tandem gates; full position authority stays
+  out. Do not implement before the boat exists.
+- Audio direction above is Act-1-scoped; boat/storm audio re-planned with Act 2.
 
 ---
 
@@ -206,34 +295,14 @@ purpose — re-plan after the slice teaches us.
   start if the entrypoint is missing.
 - `docker compose up -d` → Nakama console at `http://127.0.0.1:7351`
   (admin/password per compose), game socket `7350`.
-- Godot: open `godot/`, run scene `scenes/boot.tscn` (M0 creates it; the
-  nakama-godot addon is vendored under `godot/addons/`). Second instance:
-  `godot --path godot -- --slot=keeper_b`. Couch mode: launch flag `--couch`
-  or title-screen toggle. Full flag list in README.
+- Godot: open `godot/`, run scene `scenes/boot.tscn` (the nakama-godot addon is
+  vendored under `godot/addons/`). Running with no flags gets the title screen;
+  `godot --path godot -- --slot=keeper_b --world=HARBO` skips it. Couch mode:
+  `--couch`, or the title-screen toggle.
 - Server logs: `docker compose logs -f nakama`.
 - `tools/verify_m0.sh` … `verify_m7.sh` run each milestone's acceptance criteria
-  and write evidence to `.m0-evidence/` … `.m7-evidence/`. They need the stack
-  up and they each use a fresh world code per run, so they can be re-run at will.
-
-## Runbook — a fresh checkout to the lit lamp
-
-```sh
-cd nakama && npm install && npx tsc && cd ..   # build the runtime FIRST
-docker compose up -d                            # Nakama + Postgres
-docker compose logs nakama | grep "runtime loaded"
-
-# One machine, two pads:
-godot --path godot            # title screen -> pick a world, couch, both keepers
-
-# Or two machines / two instances:
-godot --path godot -- --slot=keeper_a --world=HARBO
-godot --path godot -- --slot=keeper_b --world=HARBO
-```
-
-Then, on the pads only: gather on the shore at LOW tide, craft at the bench,
-read the board in the tower and fund each step in turn, and when the lamp is
-fuelled, both of you take the crank. Everything verifiable about that path is
-covered by `tools/verify_m7.sh`, which plays it end to end.
+  and write evidence to `.m0-evidence/` … `.m7-evidence/`. Each run uses a fresh
+  world code, so they are safe to re-run.
 
 ## Open items intentionally deferred
 
