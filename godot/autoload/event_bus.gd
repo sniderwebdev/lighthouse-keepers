@@ -17,6 +17,8 @@ signal tide_changed(phase: String, t: float)
 ## (DESIGN §2), so it has to hear the quiet progress between flips too —
 ## listening only for phase changes leaves it free-running for minutes at a time.
 signal tide_progressed(phase: String, t: float, cycle: int)
+## The light the sky is casting on everything, whenever it steps.
+signal ambient_changed(color: Color)
 signal inventory_changed(item_id: String, new_count: int)
 ## One authoritative diff's worth of inventory change, together. A craft spends
 ## and grants in a single message, and anything that wants to react to THAT —

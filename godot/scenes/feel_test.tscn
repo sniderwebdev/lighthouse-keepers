@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://blighthousekeeperfeel"]
+[gd_scene load_steps=10 format=3 uid="uid://blighthousekeeperfeel"]
 
 [ext_resource type="Script" path="res://scenes/feel_test.gd" id="1_feel"]
 [ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://game/shore_zone.gd" id="4_zone"]
 [ext_resource type="PackedScene" path="res://game/crank.tscn" id="5_crank"]
 [ext_resource type="Script" path="res://tools/test_marker.gd" id="99_marker"]
+[ext_resource type="Texture2D" path="res://art/placeholder/dither.png" id="98_dither"]
 
 [sub_resource type="RectangleShape2D" id="Shape_wall_h"]
 size = Vector2(1280, 16)
@@ -43,7 +44,7 @@ offset_left = 0.0
 offset_top = 0.0
 offset_right = 220.0
 offset_bottom = 720.0
-color = Color(0.141176, 0.294118, 0.345098, 1)
+color = Color(0.172549, 0.364706, 0.419608, 1)
 
 [node name="SeaEdge" type="ColorRect" parent="Terrain"]
 offset_left = 196.0
@@ -57,21 +58,21 @@ offset_left = 220.0
 offset_top = 0.0
 offset_right = 520.0
 offset_bottom = 720.0
-color = Color(0.301961, 0.270588, 0.360784, 1)
+color = Color(0.337255, 0.313725, 0.376471, 1)
 
 [node name="DrySand" type="ColorRect" parent="Terrain"]
 offset_left = 520.0
 offset_top = 0.0
 offset_right = 840.0
 offset_bottom = 720.0
-color = Color(0.227451, 0.200000, 0.278431, 1)
+color = Color(0.301961, 0.270588, 0.360784, 1)
 
 [node name="Turf" type="ColorRect" parent="Terrain"]
 offset_left = 840.0
 offset_top = 0.0
 offset_right = 1280.0
 offset_bottom = 720.0
-color = Color(0.196078, 0.172549, 0.239216, 1)
+color = Color(0.239216, 0.372549, 0.298039, 1)
 
 [node name="TurfGreen" type="ColorRect" parent="Terrain"]
 offset_left = 900.0
@@ -151,6 +152,36 @@ offset_top = 0.0
 offset_right = 840.0
 offset_bottom = 720.0
 color = Color(0.172549, 0.364706, 0.419608, 1)
+
+[node name="DitherSeaWet" type="TextureRect" parent="Terrain"]
+texture_repeat = 2
+offset_left = 220.0
+offset_top = 0.0
+offset_right = 230.0
+offset_bottom = 720.0
+texture = ExtResource("98_dither")
+stretch_mode = 1
+modulate = Color(0.141176, 0.294118, 0.345098, 1)
+
+[node name="DitherWetDry" type="TextureRect" parent="Terrain"]
+texture_repeat = 2
+offset_left = 520.0
+offset_top = 0.0
+offset_right = 530.0
+offset_bottom = 720.0
+texture = ExtResource("98_dither")
+stretch_mode = 1
+modulate = Color(0.301961, 0.270588, 0.360784, 1)
+
+[node name="DitherDryTurf" type="TextureRect" parent="Terrain"]
+texture_repeat = 2
+offset_left = 840.0
+offset_top = 0.0
+offset_right = 850.0
+offset_bottom = 720.0
+texture = ExtResource("98_dither")
+stretch_mode = 1
+modulate = Color(0.301961, 0.270588, 0.360784, 1)
 
 [node name="Walls" type="StaticBody2D" parent="."]
 

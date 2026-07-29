@@ -103,6 +103,7 @@ func _apply() -> void:
 		if _canvas != null:
 			_canvas.color = ambient
 		ambient_changed.emit(ambient)
+		EventBus.ambient_changed.emit(ambient)
 
 ## Gameplay query: is a shore tile of given height currently submerged?
 func is_submerged(tile_height: float) -> bool:

@@ -12,6 +12,7 @@ extends Node
 ##   --slot=keeper_b      claim a specific slot (default keeper_a)
 ##   --world=TEST01       world code to join (default TEST01)
 ##   --host=127.0.0.1 --port=7350
+##   --debug-hud          show the developer readout (off by default)
 ##   --net-verbose        dump the Nakama wire trace (noisy)
 ##   --scene=beach|room   which space to enter (default beach)
 ##   --autowalk[=route]   synthesise pad input along a named debug route
@@ -61,7 +62,7 @@ var _tuning_selftest := false
 var _debug_advance: PackedStringArray = []
 var _debug_harvest := false
 var _debug_craft: PackedStringArray = []
-var _debug_visible := true
+var _debug_visible := false
 var _skip_title := false
 var _scene := DEFAULT_SCENE
 var _world: Node2D = null
@@ -80,6 +81,7 @@ func _ready() -> void:
 	EventBus.room_change_requested.connect(_on_room_change_requested)
 	EventBus.node_changed.connect(_on_node_changed)
 
+	%DebugLayer.visible = _debug_visible
 	_world_label.text = "world:    %s" % _world_code
 	_hint_label.text = "requesting: %s" % _slots
 	_log("boot: world=%s slots=%s host=%s:%d" % [_world_code, _slots, Net.host, Net.port])
@@ -105,6 +107,7 @@ func _show_title() -> void:
 func _on_title_start(world_code: String, slots: String) -> void:
 	_world_code = world_code
 	_slots = slots
+	%DebugLayer.visible = _debug_visible
 	_world_label.text = "world:    %s" % _world_code
 	%TitleLayer.get_child(0).queue_free()
 	%DebugLayer.visible = _debug_visible
@@ -138,6 +141,8 @@ func _parse_flags() -> void:
 			Net.host = arg.split("=", true, 1)[1]
 		elif arg.begins_with("--port="):
 			Net.port = int(arg.split("=", true, 1)[1])
+		elif arg == "--debug-hud":
+			_debug_visible = true
 		elif arg == "--net-verbose":
 			Net.log_level = NakamaLogger.LOG_LEVEL.DEBUG
 		elif arg.begins_with("--shot="):

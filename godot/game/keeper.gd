@@ -24,6 +24,12 @@ const SOAKED_SPEED_SCALE := 0.5
 ## How long the keeper is faded out while the water carries them home.
 const CATCH_FADE := 0.45
 
+## How much of the sky's darkening a keeper resists. The eye must always be able
+## to find the human thing by finding the warmth (DESIGN §6) — and that law is
+## worth least at noon and most at high tide, which is exactly when a plain
+## multiply was making both keepers disappear into the ground.
+const AMBIENT_RESISTANCE := 0.6
+
 const POSE_HZ := 10.0
 const POSE_INTERVAL := 1.0 / POSE_HZ
 ## Replay runs this far behind the newest sample, so there is almost always a
@@ -92,6 +98,7 @@ func _ready() -> void:
 	EventBus.keeper_released.connect(_on_released)
 	_interactor.target_changed.connect(_on_target_changed)
 	EventBus.ui_modal_changed.connect(_on_ui_modal_changed)
+	EventBus.ambient_changed.connect(_on_ambient_changed)
 	_apply_facing()
 	_update_visibility()
 
@@ -241,6 +248,17 @@ func _set_pose(pos: Vector2, p_facing: int) -> void:
 	if p_facing != facing:
 		facing = p_facing
 		_apply_facing()
+
+## Partly undoes the ambient on the keeper alone, so they stay lit while the
+## world around them goes to dusk. Alpha is left alone: the catch fade owns it.
+func _on_ambient_changed(ambient: Color) -> void:
+	var lift := Color(
+		lerpf(1.0, 1.0 / maxf(ambient.r, 0.05), AMBIENT_RESISTANCE),
+		lerpf(1.0, 1.0 / maxf(ambient.g, 0.05), AMBIENT_RESISTANCE),
+		lerpf(1.0, 1.0 / maxf(ambient.b, 0.05), AMBIENT_RESISTANCE),
+	)
+	lift.a = _sprite.modulate.a
+	_sprite.modulate = lift
 
 # --- reaching for things ---
 

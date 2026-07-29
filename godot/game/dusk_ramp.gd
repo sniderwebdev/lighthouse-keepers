@@ -13,11 +13,18 @@ const RAMP: PackedStringArray = [
 ]
 
 ## How dark the world is allowed to get. A CanvasModulate multiplies, so feeding
-## it #191536 directly would leave the scene at a tenth of its brightness — a
-## black screen, not a night. The ambient keeps the ramp step's exact hue and
-## only its brightness is mapped into a range you can still play in.
-const NIGHT_VALUE := 0.52
+## it a ramp colour directly compounds twice: the hue crushes whichever channels
+## it is not, and the value crushes the rest. Measured on the old formula, the
+## ground rendered #160e2a at mid tide and #0c081f at high — a black screen, not
+## a night.
+const NIGHT_VALUE := 0.72
 const DAY_VALUE := 1.0
+
+## How far the light is pushed toward the ramp's hue. The sky still has to READ
+## as the ramp — it is the tide clock (DESIGN §2) — but a full-strength tint
+## multiplied over the world removes two channels of everything. Pushing part of
+## the way keeps the colour of the hour and most of the light.
+const TINT_STRENGTH := 0.55
 
 ## Ramp step for a tide t in 0..1. The cycle is LOW -> MID -> HIGH -> MID -> LOW,
 ## so brightness is a triangle: brightest at the ends, darkest at high water.
@@ -38,9 +45,14 @@ static func ambient_for(t: float) -> Color:
 	var idx := index_for(t)
 	var base := Color(RAMP[idx])
 	var value := lerpf(NIGHT_VALUE, DAY_VALUE, float(idx) / float(RAMP.size() - 1))
-	# Normalise the ramp colour to full brightness, then scale it to `value`, so
-	# the hue is exactly the ramp's and only the level is ours.
+	# Normalise the ramp colour to full brightness so the hue is exactly the
+	# ramp's, push the light part of the way toward it, then set the level.
 	var peak := maxf(base.r, maxf(base.g, base.b))
 	if peak <= 0.0:
 		return Color(value, value, value)
-	return Color(base.r / peak * value, base.g / peak * value, base.b / peak * value)
+	var hue := Color(base.r / peak, base.g / peak, base.b / peak)
+	return Color(
+		lerpf(1.0, hue.r, TINT_STRENGTH) * value,
+		lerpf(1.0, hue.g, TINT_STRENGTH) * value,
+		lerpf(1.0, hue.b, TINT_STRENGTH) * value,
+	)
