@@ -12,8 +12,10 @@ class_name Keeper
 ## world is held to goes through Net.send_command().
 
 ## Cozy, not twitchy: about a second and a half to cross the short side of the
-## screen, and a short slide into and out of motion.
-const MAX_SPEED := 90.0
+## screen, and a short slide into and out of motion. The number itself lives in
+## Tuning, because how fast this feels is a thing two people decide by playing,
+## not a thing anybody decides by reading (CLAUDE.md Testing law).
+const ACCEL_TO_TOP := 0.15
 const ACCEL := 600.0
 const DECEL := 900.0
 ## Wading home wet. Slow enough to feel like a consequence, fast enough that it
@@ -114,7 +116,7 @@ func _drive(delta: float) -> void:
 	if wish.length() > 1.0:
 		wish = wish.normalized()
 
-	var speed := MAX_SPEED * (SOAKED_SPEED_SCALE if is_soaked else 1.0)
+	var speed := Tuning.get_value("walk_speed") * (SOAKED_SPEED_SCALE if is_soaked else 1.0)
 	var wanted_velocity := wish * speed
 	var rate := ACCEL if wish != Vector2.ZERO else DECEL
 	velocity = velocity.move_toward(wanted_velocity, rate * delta)

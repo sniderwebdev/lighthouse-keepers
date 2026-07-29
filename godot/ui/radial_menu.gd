@@ -31,8 +31,9 @@ const WHEEL_CENTRE := Vector2(320, 132)
 const WHEEL_RADIUS := Vector2(74, 56)
 const CELL := Vector2(60, 34)
 
-## Past this the stick counts as aimed. Below it, the last slot stays selected.
-const AIM_DEADZONE := 0.45
+## Past this the stick counts as aimed; below it the last slot stays selected.
+## In Tuning, because where that line sits is the difference between a wheel that
+## answers a flick and one that answers a shove.
 
 # Palette, straight off the mock (DESIGN §6 ramps).
 const C_TEXT := Color("#ece2d0")
@@ -109,7 +110,7 @@ func _process(_delta: float) -> void:
 		_prefix + "move_left", _prefix + "move_right",
 		_prefix + "move_up", _prefix + "move_down",
 	)
-	if aim.length() >= AIM_DEADZONE:
+	if aim.length() >= Tuning.get_value("radial_deadzone"):
 		var picked := _slot_for(aim)
 		if picked != _selected:
 			_selected = picked

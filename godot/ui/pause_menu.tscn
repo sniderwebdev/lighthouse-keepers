@@ -86,6 +86,15 @@ theme_override_colors/font_focus_color = Color(0.964706, 0.780392, 0.321569, 1)
 theme_override_font_sizes/font_size = 8
 text = "Debug readout"
 
+[node name="Tuning" type="Button" parent="SafeArea/Centre/Panel/Pad/Rows/Items"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(96, 16)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
+theme_override_colors/font_focus_color = Color(0.964706, 0.780392, 0.321569, 1)
+theme_override_font_sizes/font_size = 8
+text = "How it feels"
+
 [node name="Resume" type="Button" parent="SafeArea/Centre/Panel/Pad/Rows/Items"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(96, 16)

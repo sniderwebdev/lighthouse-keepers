@@ -156,6 +156,18 @@ func send_pose(slot: String, pos: Vector2, facing: int, room: String) -> void:
 	var cmd := Command.pose(slot, pos, facing, room)
 	_socket.send_match_state_async(match_id, int(cmd["op"]), JSON.stringify(cmd["data"]))
 
+## Dev-only, and only meaningful on a dev server: asks the world to change how
+## long a tide takes. Used by the tuning overlay during playtests.
+func request_cycle_seconds(seconds: float) -> void:
+	if status != "online":
+		return
+	var result: NakamaAPI.ApiRpc = await _socket.rpc_async(
+		"debug_set_cycle_seconds",
+		JSON.stringify({"world_code": world_code, "seconds": seconds}),
+	)
+	if result.is_exception():
+		push_warning("Net: cycle length not accepted (%s)" % result.get_exception().message)
+
 # --- incoming ---
 
 func _on_match_state(state: NakamaRTAPI.MatchData) -> void:

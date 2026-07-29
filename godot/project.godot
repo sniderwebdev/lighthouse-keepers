@@ -15,6 +15,10 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Lighthouse Keepers"
+; Exported release builds block-buffer stdout, so a short run loses whatever
+; has not filled a 4KB block, silently truncating both harness logs and anything
+; a playtester would paste back. Flushing per print costs nothing at this volume.
+run/flush_stdout_on_print=true
 run/main_scene="uid://blighthousekeeperboot"
 config/features=PackedStringArray("4.6")
 
@@ -22,6 +26,7 @@ config/features=PackedStringArray("4.6")
 
 Nakama="*res://addons/com.heroiclabs.nakama/Nakama.gd"
 EventBus="*res://autoload/event_bus.gd"
+Tuning="*res://autoload/tuning.gd"
 Net="*res://autoload/net.gd"
 WorldState="*res://autoload/world_state.gd"
 
@@ -183,5 +188,6 @@ p2_page_next={
 [rendering]
 
 textures/canvas_textures/default_texture_filter=0
+textures/vram_compression/import_etc2_astc=true
 2d/snap/snap_2d_transforms_to_pixel=true
 2d/snap/snap_2d_vertices_to_pixel=true

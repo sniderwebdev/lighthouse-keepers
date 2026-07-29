@@ -17,6 +17,7 @@ extends Node
 ##   --autowalk[=route]   synthesise pad input along a named debug route
 ##   --debug-gather=a,b   gather these node ids straight away (debug seeding)
 ##   --ui-selftest        drive the basket with synthesised pad input and report
+##   --tuning-selftest    open the tuning overlay and turn every value
 ##   --debug-advance=a,b  send ADVANCE_STEP directly, bypassing the board
 ##   --debug-craft=a,b    send CRAFT directly, at each recipe's own station
 ##   --debug-harvest      gather every node, and every node the tide brings back
@@ -34,6 +35,8 @@ const SCENES := {
 	"beach": "res://scenes/beach.tscn",
 	"tower": "res://scenes/tower.tscn",
 	"room": "res://scenes/world.tscn",
+	# Story-free, for tuning how it feels without spending Session 1 on it.
+	"feel": "res://scenes/feel_test.tscn",
 }
 const DEFAULT_SCENE := "beach"
 
@@ -54,6 +57,7 @@ var _autowalk := false
 var _autowalk_route := "tour"
 var _debug_gather: PackedStringArray = []
 var _ui_selftest := false
+var _tuning_selftest := false
 var _debug_advance: PackedStringArray = []
 var _debug_harvest := false
 var _debug_craft: PackedStringArray = []
@@ -147,6 +151,8 @@ func _parse_flags() -> void:
 			_autowalk_route = arg.split("=", true, 1)[1]
 		elif arg.begins_with("--debug-gather="):
 			_debug_gather = arg.split("=", true, 1)[1].split(",")
+		elif arg == "--tuning-selftest":
+			_tuning_selftest = true
 		elif arg == "--ui-selftest":
 			_ui_selftest = true
 		elif arg == "--debug-harvest":
@@ -196,8 +202,11 @@ func _enter_world() -> void:
 	add_child(preload("res://ui/tandem_shimmer.tscn").instantiate())
 	add_child(preload("res://ui/relight_beat.tscn").instantiate())
 	menus.debug_toggle_requested.connect(_toggle_debug_readout)
-	if _autowalk:
-		var walker := preload("res://tools/autowalk.gd").new()
+	# Loaded rather than preloaded: a build that strips the debug tools must still
+	# boot, and a hard preload of a missing script fails at parse time — before
+	# anything gets a chance to check the flag.
+	if _autowalk and ResourceLoader.exists("res://tools/autowalk.gd"):
+		var walker: Node = (load("res://tools/autowalk.gd") as GDScript).new()
 		walker.name = "AutoWalk"
 		walker.route = _autowalk_route
 		add_child(walker)
@@ -226,6 +235,8 @@ func _enter_world() -> void:
 		_log("debug: harvesting whatever washes in")
 	if _ui_selftest:
 		_run_ui_selftest(menus)
+	if _tuning_selftest:
+		_run_tuning_selftest(menus)
 	_log("world entered: %s (%s)" % [_scene, "couch" if Net.is_couch() else "online"])
 
 ## Drives the basket with the REAL actions a pad would send, so what it proves is
@@ -251,6 +262,33 @@ func _run_ui_selftest(menus: GameMenus) -> void:
 	_send_action("cancel")
 	await get_tree().create_timer(0.5).timeout
 	_log("uitest: inventory open=%s (expected false)" % menus.any_open())
+
+## Opens the tuning overlay the way a player would — pause, then the entry — and
+## turns each value with real direction events.
+func _run_tuning_selftest(menus: GameMenus) -> void:
+	await get_tree().create_timer(2.0).timeout
+	_log("tunetest: before %s" % Tuning.summary())
+	_send_action("menu_pause")
+	await get_tree().create_timer(0.5).timeout
+	# The pause menu's third entry is the tuning overlay.
+	for i in 2:
+		_send_action("ui_down")
+		await get_tree().create_timer(0.25).timeout
+	_send_action("ui_accept")
+	await get_tree().create_timer(0.6).timeout
+	_log("tunetest: overlay open=%s" % menus.any_open())
+
+	for key in Tuning.DEFAULTS:
+		_send_action("ui_right")
+		await get_tree().create_timer(0.3).timeout
+		_log("tunetest: %s now %s" % [key, Tuning.format(key)])
+		_send_action("ui_down")
+		await get_tree().create_timer(0.25).timeout
+
+	_log("tunetest: after %s" % Tuning.summary())
+	_send_action("cancel")
+	await get_tree().create_timer(0.5).timeout
+	_log("tunetest: overlay open=%s (expected false)" % menus.any_open())
 
 func _send_action(action: String) -> void:
 	var down := InputEventAction.new()

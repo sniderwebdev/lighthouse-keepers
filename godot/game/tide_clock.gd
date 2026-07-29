@@ -14,7 +14,9 @@ signal water_level_changed(level: float)   # 0.0 = lowest, 1.0 = highest
 signal ambient_changed(color: Color)       # the sky's colour, on the world
 signal phase_changed(phase: String)
 
-## Mirror of SECONDS_PER_CYCLE in match_handler.ts.
+## The committed default, mirroring SECONDS_PER_CYCLE in match_handler.ts. What
+## is actually in force comes from the world, because the cycle length is a feel
+## value a playtest can turn.
 const SECONDS_PER_CYCLE := 480.0
 ## A correction bigger than this is a jump — a join, or a dev tide set — and is
 ## taken at once rather than eased into.
@@ -74,13 +76,17 @@ func _process(delta: float) -> void:
 	# Carry the tide forward at the server's rate. When nobody is connected the
 	# server's clock is paused — and so is this one, because there is no client
 	# running to advance it.
-	t = fposmod(t + delta / SECONDS_PER_CYCLE, 1.0)
+	t = fposmod(t + delta / cycle_seconds(), 1.0)
 
 	var next_phase := _phase_for(t)
 	if next_phase != phase:
 		phase = next_phase
 		phase_changed.emit(phase)
 	_apply()
+
+## What is in force right now, not what shipped.
+func cycle_seconds() -> float:
+	return maxf(1.0, float(WorldState.tide.get("cycle_seconds", SECONDS_PER_CYCLE)))
 
 func _phase_for(p_t: float) -> String:
 	return PHASES[int(p_t * PHASES.size()) % PHASES.size()]

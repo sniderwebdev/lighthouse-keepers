@@ -24,6 +24,7 @@ signal debug_toggle_requested()
 @onready var _reader: BottleReader = %Reader
 @onready var _dialogue: DialogueBox = %Dialogue
 @onready var _log: LogBook = %Log
+@onready var _tuning: TuningOverlay = %Tuning
 
 var _hold := 0.0
 var _holding := false
@@ -33,11 +34,12 @@ func _ready() -> void:
 	_pause.closed.connect(_on_any_closed)
 	_pause.chose_inventory.connect(_open_inventory)
 	_pause.chose_debug.connect(func() -> void: debug_toggle_requested.emit())
+	_pause.chose_tuning.connect(_open_tuning)
 	_radial.closed.connect(_on_any_closed)
 	EventBus.station_wheel_requested.connect(_on_station_wheel_requested)
 	_board.closed.connect(_on_any_closed)
 	EventBus.milestone_board_requested.connect(_on_board_requested)
-	for panel in [_reader, _dialogue, _log]:
+	for panel in [_reader, _dialogue, _log, _tuning]:
 		panel.closed.connect(_on_any_closed)
 	EventBus.bottle_reader_requested.connect(_on_reader_requested)
 	EventBus.dialogue_requested.connect(_on_dialogue_requested)
@@ -45,7 +47,8 @@ func _ready() -> void:
 
 func any_open() -> bool:
 	return _inventory.is_open() or _pause.is_open() or _radial.is_open() \
-		or _board.is_open() or _reader.is_open() or _dialogue.is_open() or _log.is_open()
+		or _board.is_open() or _reader.is_open() or _dialogue.is_open() \
+		or _log.is_open() or _tuning.is_open()
 
 ## The wheel announces its own modality when it opens, so this only forwards.
 func _on_station_wheel_requested(station: Station, slot: String, input_prefix: String) -> void:
@@ -106,6 +109,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_pause.open()
 		_announce(true)
+
+func _open_tuning() -> void:
+	_pause.close()
+	_tuning.open("")
+	_announce(true)
 
 func _open_inventory() -> void:
 	_pause.close()

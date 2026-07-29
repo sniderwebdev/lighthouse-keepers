@@ -16,7 +16,8 @@ const MIN_ZOOM := 1.0
 const MAX_ZOOM := 1.5
 ## Keep keepers off the very edge of the frame when fitting them.
 const FIT_MARGIN := Vector2(64, 48)
-const FOLLOW_SMOOTH := 6.0
+## How hard the camera chases. Lives in Tuning: whether this reads as "the camera
+## is with us" or "the camera is dragging us" is a feel question.
 const ZOOM_SMOOTH := 3.0
 
 var targets: Array[Node2D] = []
@@ -56,7 +57,8 @@ func _track(delta: float) -> void:
 		_zoom_level = desired_zoom
 		_initialised = true
 	else:
-		_focus = _focus.lerp(desired_focus, clampf(delta * FOLLOW_SMOOTH, 0.0, 1.0))
+		var follow: float = Tuning.get_value("camera_smoothing")
+		_focus = _focus.lerp(desired_focus, clampf(delta * follow, 0.0, 1.0))
 		_zoom_level = lerpf(_zoom_level, desired_zoom, clampf(delta * ZOOM_SMOOTH, 0.0, 1.0))
 
 	zoom = Vector2(_zoom_level, _zoom_level)

@@ -157,6 +157,10 @@ interface TideState {
   t: number;
   cycle: number;
   storm: boolean;
+  // How long a full cycle takes. Lives in the world rather than in a constant
+  // because it is a FEEL value, and feel is tuned by playing (CLAUDE.md Testing
+  // law). SECONDS_PER_CYCLE is the committed default; this is what is in force.
+  cycle_seconds: number;
 }
 
 // The PERSISTED world. Presence is deliberately not in here: it is a property of
@@ -479,6 +483,19 @@ const matchSignal: nkruntime.MatchSignalFunction = (ctx, logger, nk, d, tick, st
   } catch (e) {
     return { state: s, data: JSON.stringify({ ok: false, error: "bad signal payload" }) };
   }
+  // Dev only, like set_tide: the cycle length is a feel value and this is how a
+  // playtest turns it without an editor.
+  if (req.op === "set_cycle_seconds") {
+    const secs = Number(req.seconds);
+    if (!isFinite(secs) || secs < 10 || secs > 7200) {
+      return { state: s, data: JSON.stringify({ ok: false, error: "seconds out of range" }) };
+    }
+    s.world.tide.cycle_seconds = secs;
+    s.dirty = true;
+    broadcast(d, { tide: tideDiff(s.world.tide) });
+    logger.warn("DEV: cycle length of %s set to %ds", s.worldId, secs);
+    return { state: s, data: JSON.stringify({ ok: true, cycle_seconds: secs }) };
+  }
   if (req.op !== "set_tide") {
     return { state: s, data: JSON.stringify({ ok: false, error: "unknown signal" }) };
   }
@@ -497,9 +514,7 @@ const matchSignal: nkruntime.MatchSignalFunction = (ctx, logger, nk, d, tick, st
     rollBottles(s, d, logger);
   }
   s.dirty = true;
-  broadcast(d, {
-    tide: { phase: s.world.tide.phase, t: t, cycle: s.world.tide.cycle, storm: s.world.tide.storm },
-  });
+  broadcast(d, { tide: tideDiff(s.world.tide) });
   logger.warn("DEV: tide of world %s jumped to t=%f (%s)", s.worldId, t, s.world.tide.phase);
   return { state: s, data: JSON.stringify({ ok: true, phase: s.world.tide.phase, t: t }) };
 };
@@ -772,7 +787,7 @@ function anyonePresent(s: MatchState): boolean {
 
 function advanceTide(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
   const t = s.world.tide;
-  const step = 1 / (SECONDS_PER_CYCLE * TICK_RATE);
+  const step = 1 / (Math.max(1, t.cycle_seconds) * TICK_RATE);
   const before = t.t;
   t.t += step;
   if (t.t >= 1) {
@@ -789,11 +804,18 @@ function advanceTide(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
   if (newPhase !== t.phase) {
     t.phase = newPhase;
     s.dirty = true;
-    broadcast(dispatcher, { tide: { phase: t.phase, t: t.t, cycle: t.cycle, storm: t.storm } });
+    broadcast(dispatcher, { tide: tideDiff(t) });
   } else if (Math.floor(before * 20) !== Math.floor(t.t * 20)) {
     // lightweight progress ticks for smooth client interpolation
-    broadcast(dispatcher, { tide: { phase: t.phase, t: t.t, cycle: t.cycle, storm: t.storm } });
+    broadcast(dispatcher, { tide: tideDiff(t) });
   }
+}
+
+function tideDiff(t: TideState) {
+  return {
+    phase: t.phase, t: t.t, cycle: t.cycle, storm: t.storm,
+    cycle_seconds: t.cycle_seconds,
+  };
 }
 
 function resolveSlot(s: MatchState, sessionId: string, explicit?: string): Slot | null {
@@ -935,7 +957,7 @@ function loadWorld(nk: nkruntime.Nakama, worldId: string): WorldState {
     const stored = res[0].value as any;
     return {
       version: stored.version || 1,
-      tide: stored.tide || { phase: "LOW", t: 0, cycle: 0, storm: false },
+      tide: normaliseTide(stored.tide),
       flags: stored.flags || {},
       inventory: stored.inventory || {},
       milestones: stored.milestones || {},
@@ -948,7 +970,7 @@ function loadWorld(nk: nkruntime.Nakama, worldId: string): WorldState {
   }
   return {
     version: 1,
-    tide: { phase: "LOW", t: 0, cycle: 0, storm: false },
+    tide: { phase: "LOW", t: 0, cycle: 0, storm: false, cycle_seconds: SECONDS_PER_CYCLE },
     flags: {},
     inventory: {},
     milestones: {},
@@ -957,6 +979,18 @@ function loadWorld(nk: nkruntime.Nakama, worldId: string): WorldState {
     npcs: {},
     log: [],
     updated_at: Date.now(),
+  };
+}
+
+/// Worlds saved before the cycle length was tunable have no cycle_seconds.
+function normaliseTide(stored: any): TideState {
+  const t = stored || {};
+  return {
+    phase: String(t.phase || "LOW"),
+    t: Number(t.t) || 0,
+    cycle: Math.floor(Number(t.cycle) || 0),
+    storm: !!t.storm,
+    cycle_seconds: Number(t.cycle_seconds) || SECONDS_PER_CYCLE,
   };
 }
 

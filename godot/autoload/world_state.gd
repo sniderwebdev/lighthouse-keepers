@@ -7,7 +7,7 @@ extends Node
 ## network exists. Read from here; never write here directly.
 
 # Mirror of the schema in DESIGN.md §8 / match_handler.ts.
-var tide := { "phase": "LOW", "t": 0.0, "cycle": 0, "storm": false }
+var tide := { "phase": "LOW", "t": 0.0, "cycle": 0, "storm": false, "cycle_seconds": 480.0 }
 var flags: Dictionary = {}        # flag -> bool
 var inventory: Dictionary = {}    # item_id -> int
 var milestones: Dictionary = {}   # milestone_id -> "todo"|"in_progress"|"done"

@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://blighthousekeepermenus"]
+[gd_scene load_steps=10 format=3 uid="uid://blighthousekeepermenus"]
 
 [ext_resource type="Script" path="res://ui/game_menus.gd" id="1_menus"]
 [ext_resource type="PackedScene" path="res://ui/inventory_panel.tscn" id="2_inv"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://ui/bottle_reader.tscn" id="6_reader"]
 [ext_resource type="PackedScene" path="res://ui/dialogue_box.tscn" id="7_dialogue"]
 [ext_resource type="PackedScene" path="res://ui/log_book.tscn" id="8_log"]
+[ext_resource type="PackedScene" path="res://ui/tuning_overlay.tscn" id="9_tune"]
 
 [node name="GameMenus" type="CanvasLayer"]
 layer = 50
@@ -38,5 +39,9 @@ unique_name_in_owner = true
 visible = false
 
 [node name="Log" parent="." instance=ExtResource("8_log")]
+unique_name_in_owner = true
+visible = false
+
+[node name="Tuning" parent="." instance=ExtResource("9_tune")]
 unique_name_in_owner = true
 visible = false
