@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://blighthousekeepertower"]
+[gd_scene load_steps=11 format=3 uid="uid://blighthousekeepertower"]
 
 [ext_resource type="Script" path="res://scenes/tower.gd" id="1_tower"]
 [ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://ui/milestone_board_post.tscn" id="5_board"]
 [ext_resource type="PackedScene" path="res://game/bed.tscn" id="6_bed"]
 [ext_resource type="PackedScene" path="res://game/crank.tscn" id="7_crank"]
+[ext_resource type="Script" path="res://tools/test_marker.gd" id="99_marker"]
 
 [sub_resource type="RectangleShape2D" id="Shape_wall_h"]
 size = Vector2(960, 16)
@@ -458,6 +459,36 @@ position = Vector2(480, 430)
 
 [node name="Arrival" type="Marker2D" parent="."]
 position = Vector2(480, 470)
+
+[node name="tm_milestone_board" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(322, 430)
+marker_id = "milestone_board"
+face = Vector2(-1, 0)
+
+[node name="tm_bed" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(638, 430)
+marker_id = "bed"
+face = Vector2(1, 0)
+
+[node name="tm_crank" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(560, 272)
+marker_id = "crank"
+face = Vector2(0, -1)
+
+[node name="tm_crank_b" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(538, 272)
+marker_id = "crank_b"
+face = Vector2(0, -1)
+
+[node name="tm_hearth" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(220, 300)
+marker_id = "hearth"
+face = Vector2(0, -1)
 
 [node name="Actors" type="Node2D" parent="."]
 unique_name_in_owner = true

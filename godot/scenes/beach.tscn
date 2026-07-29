@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://blighthousekeeperbeach"]
+[gd_scene load_steps=18 format=3 uid="uid://blighthousekeeperbeach"]
 
 [ext_resource type="Script" path="res://scenes/beach.gd" id="1_beach"]
 [ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
@@ -7,6 +7,7 @@
 [ext_resource type="PackedScene" path="res://game/resource_node.tscn" id="5_resource"]
 [ext_resource type="PackedScene" path="res://game/station.tscn" id="6_station"]
 [ext_resource type="PackedScene" path="res://game/doorway.tscn" id="7_door"]
+[ext_resource type="Script" path="res://tools/test_marker.gd" id="99_marker"]
 [ext_resource type="PackedScene" path="res://game/bottle_pickup.tscn" id="8_bottle"]
 [ext_resource type="PackedScene" path="res://game/npc.tscn" id="9_npc"]
 
@@ -220,6 +221,84 @@ position = Vector2(940, 400)
 
 [node name="Arrival" type="Marker2D" parent="."]
 position = Vector2(1160, 460)
+
+[node name="tm_driftwood_01" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(320, 250)
+marker_id = "driftwood_01"
+face = Vector2(-1, 0)
+
+[node name="tm_kelp_01" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(400, 500)
+marker_id = "kelp_01"
+face = Vector2(-1, 0)
+
+[node name="tm_brass_scrap_01" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(270, 600)
+marker_id = "brass_scrap_01"
+face = Vector2(-1, 0)
+
+[node name="tm_glass_shard_01" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(440, 150)
+marker_id = "glass_shard_01"
+face = Vector2(-1, 0)
+
+[node name="tm_bottle_01" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(360, 320)
+marker_id = "bottle_01"
+face = Vector2(-1, 0)
+
+[node name="tm_bottle_02" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(580, 300)
+marker_id = "bottle_02"
+face = Vector2(-1, 0)
+
+[node name="tm_bottle_03" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(280, 460)
+marker_id = "bottle_03"
+face = Vector2(-1, 0)
+
+[node name="tm_fish_stub_01" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(250, 200)
+marker_id = "fish_stub_01"
+face = Vector2(-1, 0)
+
+[node name="tm_hermit_crab" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(680, 470)
+marker_id = "hermit_crab"
+face = Vector2(-1, 0)
+
+[node name="tm_workbench" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(860, 502)
+marker_id = "workbench"
+face = Vector2(0, -1)
+
+[node name="tm_stove" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(1020, 502)
+marker_id = "stove"
+face = Vector2(0, -1)
+
+[node name="tm_tower_door" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(1180, 442)
+marker_id = "tower_door"
+face = Vector2(0, -1)
+
+[node name="tm_sandbar_stand" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(300, 400)
+marker_id = "sandbar_stand"
+face = Vector2(-1, 0)
 
 [node name="Actors" type="Node2D" parent="."]
 unique_name_in_owner = true
