@@ -62,6 +62,9 @@ signal station_wheel_requested(station: Station, slot: String, input_prefix: Str
 signal ui_modal_changed(open: bool)
 signal notification(text: String)            # cozy toast ("A bottle washed ashore")
 signal lamp_lit()                            # the climax — fire confetti, music swell
+## A co-op gate is half-submitted: these slots have not reached for it yet.
+## Empty means everybody has, which is the moment the gate fires.
+signal tandem_waiting(gate_id: String, waiting: PackedStringArray)
 
 # --- Net lifecycle (mirrors net.gd state for UI) ---
 signal net_status_changed(status: String)    # "connecting" | "online" | "offline" | "error"

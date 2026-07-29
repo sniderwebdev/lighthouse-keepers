@@ -107,7 +107,7 @@ check "none of the out-of-order steps were granted" $? \
   "$GRANTED later steps came true after asking for all three directly"
 
 SRV=$(docker compose -f "$REPO/docker-compose.yml" logs --since 2m nakama 2>/dev/null \
-  | grep -cE "sealed milestone (repair_glass|restore_lens|relight_lamp)" || true)
+  | grep -cE "sealed milestone (repair_glass|restore_lens|relight_lamp) \([a-z_]+\) in ORD$TAG" || true)
 [ "$SRV" = "0" ]
 check "the server sealed none of them" $? "$SRV out-of-order seals in the server log"
 

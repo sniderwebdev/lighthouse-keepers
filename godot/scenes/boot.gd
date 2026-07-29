@@ -18,6 +18,8 @@ extends Node
 ##   --debug-gather=a,b   gather these node ids straight away (debug seeding)
 ##   --ui-selftest        drive the basket with synthesised pad input and report
 ##   --debug-advance=a,b  send ADVANCE_STEP directly, bypassing the board
+##   --debug-craft=a,b    send CRAFT directly, at each recipe's own station
+##   --debug-harvest      gather every node, and every node the tide brings back
 ##   --shot=/abs/path.png grab the 640x360 viewport, then quit
 ##   --shot-at=SECONDS    when to grab it (default 6)
 ##
@@ -53,7 +55,10 @@ var _autowalk_route := "tour"
 var _debug_gather: PackedStringArray = []
 var _ui_selftest := false
 var _debug_advance: PackedStringArray = []
+var _debug_harvest := false
+var _debug_craft: PackedStringArray = []
 var _debug_visible := true
+var _skip_title := false
 var _scene := DEFAULT_SCENE
 var _world: Node2D = null
 
@@ -76,6 +81,29 @@ func _ready() -> void:
 	_log("boot: world=%s slots=%s host=%s:%d" % [_world_code, _slots, Net.host, Net.port])
 	if _shot_path != "":
 		_grab_screenshot.call_deferred()
+	# A session started from the command line skips the title: the flags already
+	# say everything the title screen would ask. Without a world named, this is a
+	# human at a controller, and they get the front door.
+	if _skip_title:
+		await _join()
+	else:
+		_show_title()
+
+func _show_title() -> void:
+	var title: TitleScreen = preload("res://ui/title_screen.tscn").instantiate()
+	%TitleLayer.add_child(title)
+	title.start_requested.connect(_on_title_start)
+	title.focus_first()
+	_hint_label.text = "pick a world and a keeper"
+	# The debug readout is a lens on a world; there is not one yet.
+	%DebugLayer.visible = false
+
+func _on_title_start(world_code: String, slots: String) -> void:
+	_world_code = world_code
+	_slots = slots
+	_world_label.text = "world:    %s" % _world_code
+	%TitleLayer.get_child(0).queue_free()
+	%DebugLayer.visible = _debug_visible
 	await _join()
 
 ## Debug affordance: prove the 640x360 viewport actually renders what the labels
@@ -95,10 +123,13 @@ func _parse_flags() -> void:
 	for arg in args:
 		if arg == "--couch":
 			_slots = Net.SLOTS_BOTH
+			_skip_title = true
 		elif arg.begins_with("--slot="):
 			_slots = _normalize_slot(arg.split("=", true, 1)[1])
+			_skip_title = true
 		elif arg.begins_with("--world="):
 			_world_code = arg.split("=", true, 1)[1].to_upper()
+			_skip_title = true
 		elif arg.begins_with("--host="):
 			Net.host = arg.split("=", true, 1)[1]
 		elif arg.begins_with("--port="):
@@ -118,6 +149,10 @@ func _parse_flags() -> void:
 			_debug_gather = arg.split("=", true, 1)[1].split(",")
 		elif arg == "--ui-selftest":
 			_ui_selftest = true
+		elif arg == "--debug-harvest":
+			_debug_harvest = true
+		elif arg.begins_with("--debug-craft="):
+			_debug_craft = arg.split("=", true, 1)[1].split(",")
 		elif arg.begins_with("--debug-advance="):
 			_debug_advance = arg.split("=", true, 1)[1].split(",")
 		elif arg.begins_with("--scene="):
@@ -156,6 +191,10 @@ func _enter_world() -> void:
 	%WorldHost.add_child(_world)
 	var menus: GameMenus = preload("res://ui/game_menus.tscn").instantiate()
 	add_child(menus)
+	# Both live above the world and survive walking between rooms: the gate can
+	# be half-submitted while one of you is still on the stairs.
+	add_child(preload("res://ui/tandem_shimmer.tscn").instantiate())
+	add_child(preload("res://ui/relight_beat.tscn").instantiate())
 	menus.debug_toggle_requested.connect(_toggle_debug_readout)
 	if _autowalk:
 		var walker := preload("res://tools/autowalk.gd").new()
@@ -173,6 +212,18 @@ func _enter_world() -> void:
 		Net.send_command(Command.advance_step(milestone_id))
 	if not _debug_advance.is_empty():
 		_log("debug: sent advance_step for %s" % ", ".join(_debug_advance))
+	for recipe_id in _debug_craft:
+		var def := RecipeRegistry.get_def(recipe_id)
+		if def != null:
+			Net.send_command(Command.craft(def.id, def.station))
+	if not _debug_craft.is_empty():
+		_log("debug: sent craft for %s" % ", ".join(_debug_craft))
+	if _debug_harvest:
+		# Take everything the shore is offering, and keep taking it as the tide
+		# brings it back. Real GATHER commands; only the walking is skipped.
+		EventBus.node_changed.connect(_on_harvest_node)
+		_harvest_all()
+		_log("debug: harvesting whatever washes in")
 	if _ui_selftest:
 		_run_ui_selftest(menus)
 	_log("world entered: %s (%s)" % [_scene, "couch" if Net.is_couch() else "online"])
@@ -229,6 +280,15 @@ func _on_room_change_requested(scene_key: String) -> void:
 func _on_ui_modal_changed(open: bool) -> void:
 	if _debug_visible:
 		%DebugLayer.visible = not open
+
+func _on_harvest_node(node_id: String, ready: bool) -> void:
+	if ready:
+		Net.send_command(Command.gather(node_id))
+
+func _harvest_all() -> void:
+	for node_id in WorldState.nodes:
+		if WorldState.node_ready(node_id):
+			Net.send_command(Command.gather(node_id))
 
 func _toggle_debug_readout() -> void:
 	_debug_visible = not _debug_visible

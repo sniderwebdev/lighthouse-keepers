@@ -1,0 +1,33 @@
+[gd_scene load_steps=3 format=3 uid="uid://blighthousekeepershimmer"]
+
+[ext_resource type="Script" path="res://ui/tandem_shimmer.gd" id="1_s"]
+
+[sub_resource type="StyleBoxFlat" id="SB_s"]
+bg_color = Color(0.141176, 0.113725, 0.278431, 0.878431)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.949020, 0.756863, 0.305882, 1)
+
+[node name="TandemShimmer" type="CanvasLayer"]
+layer = 60
+script = ExtResource("1_s")
+
+[node name="Panel" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+offset_left = 176.0
+offset_top = 268.0
+offset_right = 464.0
+offset_bottom = 288.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_s")
+
+[node name="Waiting" type="Label" parent="Panel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.949020, 0.756863, 0.305882, 1)
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+vertical_alignment = 1
+text = "waiting for your keeper"

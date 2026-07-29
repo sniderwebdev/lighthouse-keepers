@@ -87,6 +87,12 @@ func apply_diff(diff: Dictionary) -> void:
 			milestones[m] = diff["milestones"][m]
 			EventBus.milestone_changed.emit(m, milestones[m])
 
+	if diff.has("tandem"):
+		var t: Dictionary = diff["tandem"]
+		EventBus.tandem_waiting.emit(
+			String(t.get("gate_id", "")), PackedStringArray(t.get("waiting", []))
+		)
+
 	if diff.has("presence"):
 		for k in diff["presence"]:
 			presence[k] = diff["presence"][k]

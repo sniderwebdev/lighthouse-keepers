@@ -211,8 +211,29 @@ purpose — re-plan after the slice teaches us.
   `godot --path godot -- --slot=keeper_b`. Couch mode: launch flag `--couch`
   or title-screen toggle. Full flag list in README.
 - Server logs: `docker compose logs -f nakama`.
-- `tools/verify_m0.sh` runs the M0 acceptance criteria and writes evidence to
-  `.m0-evidence/`.
+- `tools/verify_m0.sh` … `verify_m7.sh` run each milestone's acceptance criteria
+  and write evidence to `.m0-evidence/` … `.m7-evidence/`. They need the stack
+  up and they each use a fresh world code per run, so they can be re-run at will.
+
+## Runbook — a fresh checkout to the lit lamp
+
+```sh
+cd nakama && npm install && npx tsc && cd ..   # build the runtime FIRST
+docker compose up -d                            # Nakama + Postgres
+docker compose logs nakama | grep "runtime loaded"
+
+# One machine, two pads:
+godot --path godot            # title screen -> pick a world, couch, both keepers
+
+# Or two machines / two instances:
+godot --path godot -- --slot=keeper_a --world=HARBO
+godot --path godot -- --slot=keeper_b --world=HARBO
+```
+
+Then, on the pads only: gather on the shore at LOW tide, craft at the bench,
+read the board in the tower and fund each step in turn, and when the lamp is
+fuelled, both of you take the crank. Everything verifiable about that path is
+covered by `tools/verify_m7.sh`, which plays it end to end.
 
 ## Open items intentionally deferred
 

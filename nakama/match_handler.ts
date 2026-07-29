@@ -103,6 +103,19 @@ interface NpcStage {
   requires_flag: string;   // "" = nothing to wait for
   grants_flag: string;
 }
+// The co-op gates. Reserved for climaxes only (DESIGN §5): never for routine
+// progress, because gating the ordinary on both of you being online is how a
+// game about two people becomes a game about scheduling.
+interface GateDef {
+  requires_flag: string;   // what must already be true for the gate to be armed
+  grants_flag: string;
+}
+const GATES: { [id: string]: GateDef } = {
+  // Act one's climax. The lamp has to be fuelled first — funding the relight is
+  // what ADVANCE_STEP does; lighting it is what the two of you do.
+  relight_lamp: { requires_flag: "lamp_ready", grants_flag: "lamp_lit" },
+};
+
 const NPCS: { [id: string]: NpcStage[] } = {
   hermit_crab: [
     { requires_flag: "", grants_flag: "crab_met" },
@@ -132,6 +145,11 @@ const NODES: { [id: string]: NodeDef } = {
   brass_scrap_01: { item: "brass_scrap", yield: 1, zone: "sandbar", respawn_cycles: 2 },
   glass_shard_01: { item: "glass_shard", yield: 1, zone: "sandbar", respawn_cycles: 2 },
   glass_shard_02: { item: "glass_shard", yield: 1, zone: "mid_beach", respawn_cycles: 2 },
+  // TODO_CONTENT: lamp_oil needs fish (PLAN.md M4) and nothing in PLAN or DESIGN
+  // says where fish come from. Placed here as a tide pool so Act One can be
+  // finished; if fishing, or the crab, or a trap is meant to be the source, this
+  // row is what should be replaced.
+  fish_stub_01: { item: "fish_stub", yield: 2, zone: "sandbar", respawn_cycles: 1 },
 };
 
 interface TideState {
@@ -561,7 +579,7 @@ function handleCommand(
         inventory: changedInv(w, step.cost), milestones: done, flags: flagged,
       });
       note(s, "milestone:" + id);
-      logger.info("sealed milestone %s (%s)", id, step.grants);
+      logger.info("sealed milestone %s (%s) in %s", id, step.grants, s.worldId);
       break;
     }
     case OP.READ_BOTTLE: {
@@ -581,7 +599,7 @@ function handleCommand(
       const bdiff: { [k: string]: string } = {};
       bdiff[id] = "read";
       broadcast(dispatcher, { flags: fdiff, bottles: bdiff });
-      logger.info("bottle %s was read", id);
+      logger.info("bottle %s was read in %s", id, s.worldId);
       break;
     }
     case OP.TALK: {
@@ -603,7 +621,7 @@ function handleCommand(
       const tnpc: { [k: string]: number } = {};
       tnpc[npcId] = reached + 1;
       broadcast(dispatcher, { flags: tflags, npcs: tnpc });
-      logger.info("%s reached stage %d (%s)", npcId, reached + 1, stage.grants_flag);
+      logger.info("%s reached stage %d (%s) in %s", npcId, reached + 1, stage.grants_flag, s.worldId);
       break;
     }
     case OP.TANDEM: {
@@ -611,8 +629,13 @@ function handleCommand(
       // window — regardless of whether that's two connections (online) or one
       // connection driving both pads (couch). Couch payload carries `slot`;
       // online derives it from the connection's single claim.
-      const gateId: string = data.gate_id;
-      if (!gateId || w.flags[gateId]) return;
+      const gateId: string = String(data.gate_id || "");
+      const gate = GATES[gateId];
+      if (!gate) return;
+      if (w.flags[gate.grants_flag]) return;                 // already done
+      // Armed only when the world is ready for it. Reaching for a lamp with no
+      // oil in it is not a moment, it is a mistake waiting to be explained.
+      if (gate.requires_flag !== "" && !w.flags[gate.requires_flag]) return;
       const slot = resolveSlot(s, sessionId, data.slot);
       if (!slot) return;
       const now = Date.now();
@@ -628,12 +651,14 @@ function handleCommand(
       }
       broadcast(dispatcher, { tandem: { gate_id: gateId, waiting: waiting } });
       if (live.length === 2) {
-        w.flags[gateId] = true;
+        w.flags[gate.grants_flag] = true;
         s.dirty = true;
         delete s.tandem[gateId];
+        note(s, "gate:" + gateId);
         const gdiff: { [k: string]: boolean } = {};
-        gdiff[gateId] = true;
+        gdiff[gate.grants_flag] = true;
         broadcast(dispatcher, { flags: gdiff });
+        logger.info("tandem gate %s fired (%s) in %s", gateId, gate.grants_flag, s.worldId);
       }
       break;
     }

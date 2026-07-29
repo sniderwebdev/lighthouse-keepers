@@ -292,6 +292,11 @@ bottle_id = "bottle_02"
 position = Vector2(260, 460)
 bottle_id = "bottle_03"
 
+[node name="fish_stub_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(230, 200)
+node_id = "fish_stub_01"
+item_id = "fish_stub"
+
 [node name="hermit_crab" parent="Actors" instance=ExtResource("9_npc")]
 position = Vector2(660, 470)
 npc_id = "hermit_crab"

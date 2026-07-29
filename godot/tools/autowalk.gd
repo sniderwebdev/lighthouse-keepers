@@ -142,6 +142,42 @@ const ROUTES: Dictionary = {
 		[0.8, "interact", ""],
 		[10.0, "aim_up", ""],
 	],
+	# In the tower: walk to the crank and take it. Used by BOTH keepers, from
+	# their own spawns, so the gate gets two real reaches.
+	"crank_a": [
+		[1.4, "move_right", ""],
+		[1.9, "move_up", ""],
+		[0.6, "", ""],
+		[0.4, "interact", ""],
+		[12.0, "", ""],
+	],
+	"crank_b": [
+		[0.5, "move_right", ""],
+		[1.9, "move_up", ""],
+		[0.6, "", ""],
+		[0.4, "interact", ""],
+		[12.0, "", ""],
+	],
+	# Couch: both pads reach for the crank at the same time, from their own
+	# spawns, on one machine.
+	"crank_couch": [
+		# Their spawns are not the same distance from the crank, so they walk
+		# their own legs before going up together.
+		[1.4, "move_right", ""],
+		[0.5, "", "move_right"],
+		[1.9, "move_up", "move_up"],
+		[0.6, "", ""],
+		[0.4, "interact", "interact"],
+		[12.0, "", ""],
+	],
+	# One keeper reaches and the other never does: the gate must not fire.
+	"crank_alone": [
+		[1.4, "move_right", ""],
+		[1.9, "move_up", ""],
+		[0.6, "", ""],
+		[0.4, "interact", ""],
+		[14.0, "", ""],
+	],
 	# Stand in front of the hearth, for a look at it.
 	"to_hearth": [
 		[2.5, "move_left", ""],

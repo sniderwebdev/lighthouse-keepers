@@ -19,6 +19,10 @@ color = Color(0.098039, 0.082353, 0.211765, 1)
 [node name="WorldHost" type="Node2D" parent="."]
 unique_name_in_owner = true
 
+[node name="TitleLayer" type="CanvasLayer" parent="."]
+unique_name_in_owner = true
+layer = 90
+
 [node name="DebugLayer" type="CanvasLayer" parent="."]
 unique_name_in_owner = true
 layer = 100
@@ -45,7 +49,7 @@ theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
 theme_override_colors/font_outline_color = Color(0.098039, 0.082353, 0.211765, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 8
-text = "LIGHTHOUSE KEEPERS — M6 story & the crab"
+text = "LIGHTHOUSE KEEPERS — M7 the lamp"
 
 [node name="StatusLabel" type="Label" parent="DebugLayer/SafeArea/Lines"]
 unique_name_in_owner = true

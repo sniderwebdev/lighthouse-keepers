@@ -88,7 +88,7 @@ Launch flags (after a `--` separator when using the CLI):
 | `--couch` | claim BOTH slots on one machine, two pads |
 | `--world=TEST01` | world code to join (default `TEST01`) |
 | `--host= --port=` | point at a non-local server |
-| `--scene=beach` / `--scene=room` | which space to enter (default `beach`) |
+| `--scene=beach` / `--scene=tower` / `--scene=room` | which space to enter |
 | `--net-verbose` | dump the Nakama wire trace |
 | `--shot=/abs/path.png` | grab the 640×360 viewport, then quit |
 
@@ -100,9 +100,14 @@ godot --path godot -- --slot=keeper_b --world=TEST01
 godot --path godot -- --couch --world=TEST01
 ```
 
-**Verify the milestones:** `tools/verify_m0.sh`, `verify_m1.sh` and `verify_m2.sh`
-run every acceptance criterion for their milestone against the live stack and
-write evidence to `.m0-evidence/`, `.m1-evidence/`, `.m2-evidence/`.
+**Verify the milestones:** `tools/verify_m0.sh` … `verify_m7.sh` run every
+acceptance criterion for their milestone against the live stack and write
+evidence to `.m0-evidence/` … `.m7-evidence/`. Each run uses a fresh world code,
+so they are safe to re-run.
+
+**Playing it.** Run with no flags and you get the title screen: pick a world code
+with the stick, choose couch or online, choose a keeper. The flags below are for
+launching straight past it, which is what the verifiers do.
 
 **The tide.** One cycle is eight real minutes (`LOW → MID → HIGH → MID`), and it
 only advances while at least one keeper is connected. The sky's colour IS the

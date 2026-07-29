@@ -83,7 +83,7 @@ READ=$(grep -oE "\[reader\] finished bottle_01" "$OUT/m6_b_a.log" | tail -1)
 check "the letter was read to the end" $? "${READ:-never finished}"
 
 SRV_READS=$(docker compose -f "$REPO/docker-compose.yml" logs --since 3m nakama 2>/dev/null \
-  | grep -c "bottle bottle_01 was read" || true)
+  | grep -c "bottle bottle_01 was read in BOT$TAG" || true)
 [ "$SRV_READS" = "1" ]
 check "the world recorded the read exactly once" $? "$SRV_READS server-side reads"
 
@@ -122,7 +122,7 @@ sleep 15
 kill_all
 
 STAGE2=$(docker compose -f "$REPO/docker-compose.yml" logs --since 3m nakama 2>/dev/null \
-  | grep -oE "hermit_crab reached stage 2 \(crab_taught_chowder\)" | tail -1)
+  | grep -oE "hermit_crab reached stage 2 \(crab_taught_chowder\) in CRB$TAG" | tail -1)
 [ -n "$STAGE2" ]
 check "the crab reached stage two once the hearth was lit" $? "${STAGE2:-never advanced}"
 
