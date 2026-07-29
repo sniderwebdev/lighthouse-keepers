@@ -179,9 +179,20 @@ check "nothing is lost: inventory identical across the catch" $? \
   "before $INV_BEFORE / after $INV_AFTER"
 
 YARD=$(python3 - "$OUT/catch_b.csv" <<'PY'
-import csv, sys
+import sys
+def rows_of(path, *fields):
+    import csv
+    out = []
+    for r in csv.DictReader(open(path)):
+        try:
+            for f in fields:
+                float(r[f])
+        except (ValueError, TypeError, KeyError):
+            continue   # truncated final row from a killed process
+        out.append(r)
+    return out
 try:
-    rows = list(csv.DictReader(open(sys.argv[1])))
+    rows = rows_of(sys.argv[1], 'x', 'y')
 except OSError:
     print("0 0 0"); sys.exit()
 rem = [r for r in rows if r['slot'] == 'keeper_a' and r['is_local'] == '0']

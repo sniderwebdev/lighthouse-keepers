@@ -1,0 +1,121 @@
+[gd_scene load_steps=6 format=3 uid="uid://blighthousekeeperreader"]
+[ext_resource type="Script" path="res://ui/bottle_reader.gd" id="1_r"]
+[sub_resource type="StyleBoxFlat" id="SB_panel"]
+bg_color = Color(0.164706, 0.145098, 0.203922, 0.949020)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.301961, 0.270588, 0.376471, 1)
+[sub_resource type="StyleBoxFlat" id="SB_paper"]
+bg_color = Color(0.925490, 0.886275, 0.815686, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.850980, 0.552941, 0.470588, 1)
+[sub_resource type="StyleBoxFlat" id="SB_btn"]
+bg_color = Color(0.949020, 0.756863, 0.305882, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.121569, 0.105882, 0.160784, 1)
+
+[sub_resource type="StyleBoxFlat" id="SB_btn_focus"]
+bg_color = Color(1.000000, 0.850980, 0.478431, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.925490, 0.886275, 0.815686, 1)
+
+[node name="BottleReader" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_r")
+
+[node name="Dim" type="ColorRect" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.098039, 0.082353, 0.211765, 0.827451)
+
+[node name="Paper" type="PanelContainer" parent="."]
+offset_left = 120.0
+offset_top = 44.0
+offset_right = 560.0
+offset_bottom = 232.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_paper")
+
+[node name="Continue" type="Button" parent="."]
+unique_name_in_owner = true
+offset_left = 240.0
+offset_top = 244.0
+offset_right = 400.0
+offset_bottom = 264.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.121569, 0.105882, 0.160784, 1)
+theme_override_colors/font_focus_color = Color(0.121569, 0.105882, 0.160784, 1)
+theme_override_font_sizes/font_size = 8
+theme_override_styles/normal = SubResource("SB_btn")
+theme_override_styles/hover = SubResource("SB_btn")
+theme_override_styles/pressed = SubResource("SB_btn")
+theme_override_styles/focus = SubResource("SB_btn_focus")
+text = "  CONTINUE"
+
+[node name="HintBar" type="PanelContainer" parent="."]
+offset_left = 32.0
+offset_top = 300.0
+offset_right = 608.0
+offset_bottom = 320.0
+mouse_filter = 2
+
+[node name="Chapter" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 120.0
+offset_top = 30.0
+offset_right = 560.0
+offset_bottom = 42.0
+theme_override_colors/font_color = Color(0.949020, 0.756863, 0.305882, 1)
+theme_override_font_sizes/font_size = 8
+text = "THE KEEPER'S TRAIL"
+
+[node name="Body" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 136.0
+offset_top = 58.0
+offset_right = 544.0
+offset_bottom = 198.0
+theme_override_colors/font_color = Color(0.227451, 0.200000, 0.250980, 1)
+theme_override_font_sizes/font_size = 8
+autowrap_mode = 2
+
+[node name="Found" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 136.0
+offset_top = 204.0
+offset_right = 544.0
+offset_bottom = 216.0
+theme_override_colors/font_color = Color(0.670588, 0.415686, 0.521569, 1)
+theme_override_font_sizes/font_size = 8
+
+[node name="Hint" type="Label" parent="HintBar"]
+unique_name_in_owner = true
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 576.0
+offset_bottom = 20.0
+theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
+theme_override_font_sizes/font_size = 8
+horizontal_alignment = 1
+

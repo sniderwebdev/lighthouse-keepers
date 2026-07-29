@@ -52,8 +52,19 @@ kill_all
 # without interpolation would instead show ~9 px hops separated by dead frames,
 # so the per-frame step distribution is what separates the two outright.
 ONLINE=$(python3 - "$OUT/online_b.csv" <<'PY'
-import csv, sys, math
-rows=list(csv.DictReader(open(sys.argv[1])))
+import sys, math
+def rows_of(path, *fields):
+    import csv
+    out = []
+    for r in csv.DictReader(open(path)):
+        try:
+            for f in fields:
+                float(r[f])
+        except (ValueError, TypeError, KeyError):
+            continue   # truncated final row from a killed process
+        out.append(r)
+    return out
+rows=rows_of(sys.argv[1], 'x', 'y', 'zoom', 'cam_x', 'cam_y')
 rem=[r for r in rows if r['slot']=='keeper_a' and r['is_local']=='0']
 loc=[r for r in rows if r['slot']=='keeper_b' and r['is_local']=='1']
 if not rem: print("0 0 0 0"); sys.exit()
@@ -83,12 +94,23 @@ echo "AC2 — couch: both pads move their own keeper simultaneously;"
 echo "      camera keeps both on screen across the test room"
 echo "=============================================================="
 launch m1_couch --couch --world=COUCH1 --scene=room --autowalk "--trace=$OUT/couch.csv" >/dev/null
-sleep 30
+sleep 33
 kill_all
 
 COUCH=$(python3 - "$OUT/couch.csv" <<'PY'
-import csv, sys, math
-rows=list(csv.DictReader(open(sys.argv[1])))
+import sys, math
+def rows_of(path, *fields):
+    import csv
+    out = []
+    for r in csv.DictReader(open(path)):
+        try:
+            for f in fields:
+                float(r[f])
+        except (ValueError, TypeError, KeyError):
+            continue   # truncated final row from a killed process
+        out.append(r)
+    return out
+rows=rows_of(sys.argv[1], 'x', 'y', 'zoom', 'cam_x', 'cam_y')
 ka=[r for r in rows if r['slot']=='keeper_a']
 kb=[r for r in rows if r['slot']=='keeper_b']
 n=min(len(ka),len(kb))

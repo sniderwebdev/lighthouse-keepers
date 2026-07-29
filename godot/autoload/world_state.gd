@@ -14,6 +14,12 @@ var milestones: Dictionary = {}   # milestone_id -> "todo"|"in_progress"|"done"
 ## node_id -> is there anything there to pick up. Authoritative: a node only
 ## empties or restocks because the server said so, never because we took it.
 var nodes: Dictionary = {}
+## bottle_id -> "washed_up" | "read". Absent means the sea has not brought it.
+var bottles: Dictionary = {}
+## npc_id -> how many stages of theirs you have had.
+var npcs: Dictionary = {}
+## The keeper's log, oldest first. A keepsake, so nothing is ever dropped.
+var log_entries: Array = []
 var presence: Dictionary = {}     # keeper_id -> bool
 ## slot -> ms of slow walk left when the message arrived. Transient: the world
 ## never remembers that somebody got wet, it only knows they are wet now.
@@ -62,6 +68,20 @@ func apply_diff(diff: Dictionary) -> void:
 			nodes[node_id] = bool(diff["nodes"][node_id])
 			EventBus.node_changed.emit(node_id, nodes[node_id])
 
+	if diff.has("bottles"):
+		for bottle_id in diff["bottles"]:
+			bottles[bottle_id] = String(diff["bottles"][bottle_id])
+			EventBus.bottle_changed.emit(bottle_id, bottles[bottle_id])
+
+	if diff.has("npcs"):
+		for npc_id in diff["npcs"]:
+			npcs[npc_id] = int(diff["npcs"][npc_id])
+			EventBus.npc_stage_changed.emit(npc_id, npcs[npc_id])
+
+	if diff.has("log"):
+		log_entries = diff["log"]
+		EventBus.log_changed.emit(log_entries)
+
 	if diff.has("milestones"):
 		for m in diff["milestones"]:
 			milestones[m] = diff["milestones"][m]
@@ -85,6 +105,12 @@ func apply_diff(diff: Dictionary) -> void:
 # --- read helpers ---
 func has_flag(flag: String) -> bool:
 	return flags.get(flag, false) == true
+
+func bottle_state(bottle_id: String) -> String:
+	return String(bottles.get(bottle_id, ""))
+
+func npc_stage(npc_id: String) -> int:
+	return int(npcs.get(npc_id, 0))
 
 func node_ready(node_id: String) -> bool:
 	return nodes.get(node_id, true) == true

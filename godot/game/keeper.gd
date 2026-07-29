@@ -63,6 +63,10 @@ var is_soaked := false
 var _ui_blocked := false
 var _hold_timer := 0.0
 var _hold_fired := false
+## Set when a menu closes while interact is still down. The same press that
+## dismissed a panel must not also re-open it — the world has not even confirmed
+## what the panel did yet.
+var _interact_latched := false
 var _fade: Tween
 var _pose_timer := 0.0
 var _last_sent := Vector2.INF
@@ -141,6 +145,12 @@ func _read_interact(delta: float) -> void:
 		return
 
 	var action := input_prefix + "interact"
+	# Wait for a clean release before believing the button again.
+	if _interact_latched:
+		if Input.is_action_pressed(action):
+			return
+		_interact_latched = false
+
 	if not reachable.requires_hold():
 		if Input.is_action_just_pressed(action):
 			reachable.interact(self)
@@ -234,6 +244,8 @@ func _set_pose(pos: Vector2, p_facing: int) -> void:
 
 func _on_ui_modal_changed(open: bool) -> void:
 	_ui_blocked = open
+	if not open and Input.is_action_pressed(input_prefix + "interact"):
+		_interact_latched = true
 	if open:
 		_prompt.visible = false
 	elif _interactor.target != null:

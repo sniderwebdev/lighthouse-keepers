@@ -9,4 +9,4 @@ inputs = {"TODO_CONTENT": 1}
 output_id = "chowder"
 output_count = 1
 station = "stove"
-unlock_flag = "TODO_CONTENT_chowder_unlock"
+unlock_flag = "crab_taught_chowder"

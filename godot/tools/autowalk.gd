@@ -19,8 +19,15 @@ const ROUTES: Dictionary = {
 		[4.0, "move_down", "move_down"],
 		[6.0, "move_left", "move_left"],
 		[4.0, "move_up", "move_up"],
-		[3.0, "move_right", "move_left"],   # separate
-		[3.0, "move_left", "move_right"],   # converge
+		# Far enough apart to actually push the camera to its widest — keepers no
+		# longer body-block each other, so they no longer nudge each other along
+		# and the old timing fell short of the range this is meant to exercise.
+		[3.6, "move_right", "move_left"],   # separate
+		# Stand apart for a beat. The camera eases rather than snapping, so a
+		# separation held only for an instant never actually reaches the widest
+		# framing it is on its way to.
+		[1.4, "", ""],
+		[3.6, "move_left", "move_right"],   # converge
 	],
 	# Walk keeper_a out onto the sandbar and leave them there to be caught.
 	"to_sandbar": [
@@ -84,6 +91,56 @@ const ROUTES: Dictionary = {
 		[0.8, "interact", ""],
 		[1.2, "dpad_right", ""],
 		[3.0, "", ""],
+	],
+	# From the beach spawn: to the bottle on the sand, open it, read it.
+	"read_bottle": [
+		[0.95, "move_up", ""],
+		[6.2, "move_left", ""],
+		[0.6, "", ""],
+		[0.3, "interact", ""],
+		[0.8, "", ""],
+		[0.3, "interact", ""],
+		[4.0, "", ""],
+	],
+	# Opens the letter and leaves it open, for a look at it.
+	"read_bottle_pose": [
+		[0.95, "move_up", ""],
+		[6.2, "move_left", ""],
+		[0.6, "", ""],
+		[0.3, "interact", ""],
+		[12.0, "", ""],
+	],
+	# From the beach spawn: over to the crab, and talk to it.
+	"talk_crab": [
+		[0.9, "move_down", ""],
+		[2.7, "move_left", ""],
+		[0.6, "", ""],
+		[0.3, "interact", ""],
+		[4.0, "", ""],
+	],
+	# The same walk from keeper_b's spawn, which starts closer to the bed.
+	# Note the FIRST column: online play always drives device 0, whichever slot
+	# you claimed. The p2_ actions only exist on the couch.
+	"turn_in_b": [
+		[1.45, "move_right", ""],
+		[0.6, "", ""],
+		[0.3, "interact", ""],
+		[5.0, "", ""],
+	],
+	# In the tower: to the bed, and turn in for the night.
+	"turn_in": [
+		[2.3, "move_right", ""],
+		[0.6, "", ""],
+		[0.3, "interact", ""],
+		[5.0, "", ""],
+	],
+	# From the beach spawn: to the stove, and hold the wheel open for a look.
+	"wheel_stove": [
+		[0.95, "move_down", ""],
+		[1.15, "move_right", ""],
+		[0.4, "", ""],
+		[0.8, "interact", ""],
+		[10.0, "aim_up", ""],
 	],
 	# Stand in front of the hearth, for a look at it.
 	"to_hearth": [

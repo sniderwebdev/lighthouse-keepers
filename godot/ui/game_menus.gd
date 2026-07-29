@@ -21,6 +21,9 @@ signal debug_toggle_requested()
 @onready var _pause: PauseMenu = %Pause
 @onready var _radial: RadialMenu = %Radial
 @onready var _board: MilestoneBoard = %Board
+@onready var _reader: BottleReader = %Reader
+@onready var _dialogue: DialogueBox = %Dialogue
+@onready var _log: LogBook = %Log
 
 var _hold := 0.0
 var _holding := false
@@ -34,9 +37,15 @@ func _ready() -> void:
 	EventBus.station_wheel_requested.connect(_on_station_wheel_requested)
 	_board.closed.connect(_on_any_closed)
 	EventBus.milestone_board_requested.connect(_on_board_requested)
+	for panel in [_reader, _dialogue, _log]:
+		panel.closed.connect(_on_any_closed)
+	EventBus.bottle_reader_requested.connect(_on_reader_requested)
+	EventBus.dialogue_requested.connect(_on_dialogue_requested)
+	EventBus.log_book_requested.connect(_on_log_requested)
 
 func any_open() -> bool:
-	return _inventory.is_open() or _pause.is_open() or _radial.is_open() or _board.is_open()
+	return _inventory.is_open() or _pause.is_open() or _radial.is_open() \
+		or _board.is_open() or _reader.is_open() or _dialogue.is_open() or _log.is_open()
 
 ## The wheel announces its own modality when it opens, so this only forwards.
 func _on_station_wheel_requested(station: Station, slot: String, input_prefix: String) -> void:
@@ -49,6 +58,24 @@ func _on_board_requested(slot: String, input_prefix: String) -> void:
 	if any_open():
 		return
 	_board.open(slot, input_prefix)
+	menu_opened.emit()
+
+func _on_reader_requested(bottle_id: String, slot: String, input_prefix: String) -> void:
+	if any_open():
+		return
+	_reader.open(bottle_id, slot, input_prefix)
+	menu_opened.emit()
+
+func _on_dialogue_requested(npc_id: String, slot: String, input_prefix: String) -> void:
+	if any_open():
+		return
+	_dialogue.open(npc_id, slot, input_prefix)
+	menu_opened.emit()
+
+func _on_log_requested(slot: String, input_prefix: String) -> void:
+	if any_open():
+		return
+	_log.open(slot, input_prefix)
 	menu_opened.emit()
 
 func _process(delta: float) -> void:

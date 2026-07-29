@@ -1,0 +1,69 @@
+[gd_scene load_steps=3 format=3 uid="uid://blighthousekeeperdialogue"]
+[ext_resource type="Script" path="res://ui/dialogue_box.gd" id="1_d"]
+[sub_resource type="StyleBoxFlat" id="SB_panel"]
+bg_color = Color(0.164706, 0.145098, 0.203922, 0.949020)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.301961, 0.270588, 0.376471, 1)
+[node name="DialogueBox" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_d")
+
+[node name="Panel" type="PanelContainer" parent="."]
+offset_left = 32.0
+offset_top = 236.0
+offset_right = 608.0
+offset_bottom = 316.0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("SB_panel")
+
+[node name="Portrait" type="ColorRect" parent="."]
+offset_left = 42.0
+offset_top = 246.0
+offset_right = 82.0
+offset_bottom = 286.0
+color = Color(0.227451, 0.200000, 0.278431, 1)
+
+[node name="PortraitEdge" type="ColorRect" parent="."]
+offset_left = 42.0
+offset_top = 246.0
+offset_right = 82.0
+offset_bottom = 248.0
+color = Color(0.301961, 0.270588, 0.376471, 1)
+
+[node name="Speaker" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 92.0
+offset_top = 246.0
+offset_right = 392.0
+offset_bottom = 258.0
+theme_override_colors/font_color = Color(0.949020, 0.756863, 0.305882, 1)
+theme_override_font_sizes/font_size = 8
+
+[node name="Line" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 92.0
+offset_top = 262.0
+offset_right = 592.0
+offset_bottom = 292.0
+theme_override_colors/font_color = Color(0.925490, 0.886275, 0.815686, 1)
+theme_override_font_sizes/font_size = 8
+autowrap_mode = 2
+
+[node name="Hint" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 92.0
+offset_top = 296.0
+offset_right = 592.0
+offset_bottom = 308.0
+theme_override_colors/font_color = Color(0.509804, 0.333333, 0.541176, 1)
+theme_override_font_sizes/font_size = 8
+

@@ -18,6 +18,7 @@ enum Op {
 	CARRY_ASSIST = 7,   # { "object_id": String, "slot": String }
 	LOG_SESSION  = 8,   # { }  -> server assembles keeper's log entry
 	CAUGHT       = 9,   # { "slot": String, "zone": String } -> wade home, slow a while
+	TALK         = 10,  # { "npc_id": String, "slot": String } -> advance a neighbour
 }
 
 ## Non-command opcodes. These are not intents and the server does not validate,
@@ -63,8 +64,11 @@ static func tandem(gate_id: String, slot: String) -> Dictionary:
 static func carry_assist(object_id: String, slot: String) -> Dictionary:
 	return make(Op.CARRY_ASSIST, { "object_id": object_id, "slot": slot })
 
-static func log_session() -> Dictionary:
-	return make(Op.LOG_SESSION, {})
+static func talk(npc_id: String, slot: String) -> Dictionary:
+	return make(Op.TALK, { "npc_id": npc_id, "slot": slot })
+
+static func log_session(slot: String) -> Dictionary:
+	return make(Op.LOG_SESSION, { "slot": slot })
 
 ## "The water reached me." A report, not an assertion: the client knows where it
 ## is standing, but only the server knows whether that ground is under water, and

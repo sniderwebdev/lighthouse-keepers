@@ -19,6 +19,8 @@ const GAMEPAD: Dictionary = {
 	"use_tool": "X",
 	"menu_radial": "Y",
 	"menu_pause": "☰",   # ☰
+	"page_prev": "L",
+	"page_next": "R",
 }
 const KEYBOARD: Dictionary = {
 	"interact": "E",
@@ -26,6 +28,8 @@ const KEYBOARD: Dictionary = {
 	"use_tool": "Q",
 	"menu_radial": "Tab",
 	"menu_pause": "F1",
+	"page_prev": "[",
+	"page_next": "]",
 }
 
 static var _device: Device = Device.GAMEPAD

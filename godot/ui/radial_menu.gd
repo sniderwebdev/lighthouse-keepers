@@ -81,7 +81,14 @@ func open(station: Station, slot: String, input_prefix: String) -> void:
 	visible = true
 	_open = true
 	EventBus.ui_modal_changed.emit(true)
-	_log("opened at %s for %s" % [station.station_id, slot])
+	var shown: PackedStringArray = []
+	for def in _recipes:
+		if def == null:
+			continue
+		var r := def as RecipeDef
+		var state := "ready" if RecipeRegistry.is_unlocked(r) else "locked"
+		shown.append("%s:%s" % [r.id, state])
+	_log("opened at %s for %s with [%s]" % [station.station_id, slot, ", ".join(shown)])
 
 func close() -> void:
 	if not _open:

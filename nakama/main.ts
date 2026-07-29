@@ -66,8 +66,11 @@ const rpcDebugSetTide: nkruntime.RpcFunction = function (ctx, logger, nk, payloa
   }
   // The tide lives inside the match, and a match can only be reached from an
   // RPC by signalling it.
-  const res = nk.matchSignal(index.matchId, JSON.stringify({ op: "set_tide", t: Number(req.t) }));
-  return res;
+  // Forward the cycle too when one was asked for. Without it the receiving end
+  // sees no cycle at all and quietly leaves the clock's cycle where it was.
+  const signal: { [k: string]: any } = { op: "set_tide", t: Number(req.t) };
+  if (req.cycle !== undefined) signal.cycle = Number(req.cycle);
+  return nk.matchSignal(index.matchId, JSON.stringify(signal));
 };
 
 interface WorldIndex {

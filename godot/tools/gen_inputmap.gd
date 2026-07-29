@@ -36,6 +36,9 @@ func _build_for_device(device: int, prefix: String) -> void:
 	_button(prefix + "use_tool", device, JOY_X)
 	_button(prefix + "menu_radial", device, JOY_Y)
 	_button(prefix + "menu_pause", device, JOY_BACK)
+	# The log book turns its pages with the shoulders (design/ui/keepers_log.png).
+	_button(prefix + "page_prev", device, JOY_BUTTON_LEFT_SHOULDER)
+	_button(prefix + "page_next", device, JOY_BUTTON_RIGHT_SHOULDER)
 
 func _add_keyboard_adaptation() -> void:
 	# Keyboard is the adaptation, never the design target. Player 1 only.
@@ -48,6 +51,8 @@ func _add_keyboard_adaptation() -> void:
 	_key("use_tool", KEY_Q)
 	_key("menu_radial", KEY_TAB)
 	_key("menu_pause", KEY_F1)
+	_key("page_prev", KEY_BRACKETLEFT)
+	_key("page_next", KEY_BRACKETRIGHT)
 
 ## Godot ships ui_accept and ui_cancel bound to the KEYBOARD ONLY. Focus moves
 ## on a d-pad out of the box, but confirm and back do not — so every menu in the

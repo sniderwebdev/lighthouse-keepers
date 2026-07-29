@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://blighthousekeeperbeach"]
+[gd_scene load_steps=17 format=3 uid="uid://blighthousekeeperbeach"]
 
 [ext_resource type="Script" path="res://scenes/beach.gd" id="1_beach"]
 [ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://game/resource_node.tscn" id="5_resource"]
 [ext_resource type="PackedScene" path="res://game/station.tscn" id="6_station"]
 [ext_resource type="PackedScene" path="res://game/doorway.tscn" id="7_door"]
+[ext_resource type="PackedScene" path="res://game/bottle_pickup.tscn" id="8_bottle"]
+[ext_resource type="PackedScene" path="res://game/npc.tscn" id="9_npc"]
 
 [sub_resource type="RectangleShape2D" id="Shape_wall_h"]
 size = Vector2(1280, 16)
@@ -169,6 +171,7 @@ disabled = true
 unique_name_in_owner = true
 
 [node name="SandbarZone" type="Area2D" parent="Zones"]
+collision_mask = 2
 position = Vector2(335, 360)
 script = ExtResource("4_zone")
 zone_id = "sandbar"
@@ -180,6 +183,7 @@ water_overlay = NodePath("../../Terrain/SandbarWater")
 shape = SubResource("Shape_sandbar")
 
 [node name="MidBeachZone" type="Area2D" parent="Zones"]
+collision_mask = 2
 position = Vector2(615, 360)
 script = ExtResource("4_zone")
 zone_id = "mid_beach"
@@ -191,6 +195,7 @@ water_overlay = NodePath("../../Terrain/MidBeachWater")
 shape = SubResource("Shape_midbeach")
 
 [node name="YardZone" type="Area2D" parent="Zones"]
+collision_mask = 2
 position = Vector2(940, 360)
 script = ExtResource("4_zone")
 zone_id = "yard"
@@ -274,6 +279,22 @@ display_name = "the bench"
 position = Vector2(1020, 480)
 station_id = "stove"
 display_name = "the stove"
+
+[node name="bottle_01" parent="Actors" instance=ExtResource("8_bottle")]
+position = Vector2(340, 320)
+bottle_id = "bottle_01"
+
+[node name="bottle_02" parent="Actors" instance=ExtResource("8_bottle")]
+position = Vector2(560, 300)
+bottle_id = "bottle_02"
+
+[node name="bottle_03" parent="Actors" instance=ExtResource("8_bottle")]
+position = Vector2(260, 460)
+bottle_id = "bottle_03"
+
+[node name="hermit_crab" parent="Actors" instance=ExtResource("9_npc")]
+position = Vector2(660, 470)
+npc_id = "hermit_crab"
 
 [node name="DoorIn" parent="Actors" instance=ExtResource("7_door")]
 position = Vector2(1180, 420)

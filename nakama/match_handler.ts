@@ -23,6 +23,7 @@ const OP = {
   CARRY_ASSIST: 7, // two-person carry: { object_id }
   LOG_SESSION: 8,  // request session log entry assembly
   CAUGHT: 9,       // { slot, zone } — "the water reached me". Validated, not trusted.
+  TALK: 10,        // { npc_id, slot } — advance an NPC's stage if its conditions hold
 
   // Not commands. Where a keeper APPEARS to be is presentation, not authoritative
   // shared state (PLAN.md M1): never validated against the world, never persisted,
@@ -70,6 +71,46 @@ const ZONE_PHASES: { [zone: string]: string[] } = {
 // cruel (DESIGN.md §1, pillar 1).
 const SLOW_WALK_MS = 20000;
 
+// A session ends when the world has been empty this long. The log is written
+// then — one entry for the evening, not one per departure.
+const SESSION_END_TICKS = TICK_RATE * 60;   // one minute
+
+// The bottles. Story arrives on the tide and cannot be binged (DESIGN §2, §9):
+// a row is eligible only once its cycle has come round and whatever it waits on
+// has happened. The letters themselves are the author's to write.
+interface BottleDef {
+  chapter: number;
+  requires_flag: string;
+  min_tide_cycle: number;
+  weight: number;
+  sets_flag: string;
+}
+const BOTTLES: { [id: string]: BottleDef } = {
+  bottle_01: { chapter: 1, requires_flag: "", min_tide_cycle: 0, weight: 1, sets_flag: "read_bottle_01" },
+  bottle_02: {
+    chapter: 2, requires_flag: "read_bottle_01", min_tide_cycle: 1, weight: 1,
+    sets_flag: "read_bottle_02",
+  },
+  bottle_03: {
+    chapter: 3, requires_flag: "read_bottle_02", min_tide_cycle: 2, weight: 1,
+    sets_flag: "read_bottle_03",
+  },
+};
+
+// The neighbours. Each stage is a small ask, a reveal, and something you can now
+// do (DESIGN §4, axis 3) — here, the stage that teaches you a recipe.
+interface NpcStage {
+  requires_flag: string;   // "" = nothing to wait for
+  grants_flag: string;
+}
+const NPCS: { [id: string]: NpcStage[] } = {
+  hermit_crab: [
+    { requires_flag: "", grants_flag: "crab_met" },
+    // Stage two hands over a recipe, which is what unlocks it in the wheel.
+    { requires_flag: "hearth_lit", grants_flag: "crab_taught_chowder" },
+  ],
+};
+
 // The spawn table. Every resource node in the world: what it gives, how much,
 // which zone it sits in, and how many tide cycles until the sea brings it back.
 // Authoritative — the scene places matching ids but has no say in the yields.
@@ -113,7 +154,22 @@ interface WorldState {
   // Persisted: a world you come back to should remember what you already picked
   // up, and the sea should have restocked it while you were away.
   nodes: { [id: string]: number };
+  // bottle id -> "washed_up" | "read". Absent means the sea has not brought it.
+  bottles: { [id: string]: string };
+  // npc id -> how many stages of theirs you have had.
+  npcs: { [id: string]: number };
+  // The keeper's log, oldest first. A keepsake, so it is never pruned.
+  log: LogEntry[];
   updated_at: number;
+}
+
+interface LogEntry {
+  day: number;
+  written_by: string;
+  cycle: number;
+  // Event ids, not prose. The templates that turn these into sentences are the
+  // author's to write; inventing them here would put words in her book.
+  lines: string[];
 }
 
 interface MatchState {
@@ -135,6 +191,10 @@ interface MatchState {
   // slot -> wall-clock ms at which the slow walk ends. Runtime only: being wet
   // is a thing that is happening, not a thing the world remembers.
   caught: { [slot: string]: number };
+  // What has happened since this world last woke up. The log is assembled from
+  // this, then it is cleared: an evening's entry is about that evening.
+  sessionEvents: string[];
+  sessionLogged: boolean;
   dirty: boolean;
   ticksSinceSave: number;
   idleTicks: number;
@@ -175,7 +235,7 @@ const RECIPES: { [id: string]: RecipeDef } = {
   },
   chowder: {
     inputs: { TODO_CONTENT: 1 }, out: "chowder", n: 1,
-    station: "stove", unlock_flag: "TODO_CONTENT_chowder_unlock",
+    station: "stove", unlock_flag: "crab_taught_chowder",
   },
 };
 // The restoration chain. Costs and order are PLAN.md's, verbatim; this table
@@ -220,6 +280,8 @@ const matchInit: nkruntime.MatchInitFunction = (ctx, logger, nk, params) => {
     tandem: {},
     poses: {},
     caught: {},
+    sessionEvents: [],
+    sessionLogged: false,
     dirty: false,
     ticksSinceSave: 0,
     idleTicks: 0,
@@ -294,6 +356,9 @@ const matchJoin: nkruntime.MatchJoinFunction = (ctx, logger, nk, dispatcher, tic
         inventory: s.world.inventory,
         milestones: s.world.milestones,
         nodes: nodeStates(s),
+        bottles: s.world.bottles,
+        npcs: s.world.npcs,
+        log: s.world.log,
         presence: s.presence,
         caught: remainingCaught(s),
         you: { slots: granted, world: s.worldId },
@@ -334,6 +399,11 @@ const matchLoop: nkruntime.MatchLoopFunction = (ctx, logger, nk, dispatcher, tic
     s.idleTicks = 0;
   } else {
     s.idleTicks += 1;
+    // Both keepers gone a minute: the evening is over, so it gets written down
+    // while the match is still alive to broadcast and persist it.
+    if (s.idleTicks === SESSION_END_TICKS) {
+      writeLogEntry(s, dispatcher, "keeper_a");
+    }
     if (s.idleTicks >= IDLE_TERMINATE_TICKS) {
       saveWorld(nk, s.worldId, s.world);
       logger.info("world %s idle, closing", s.worldId);
@@ -403,9 +473,10 @@ const matchSignal: nkruntime.MatchSignalFunction = (ctx, logger, nk, d, tick, st
   s.world.tide.phase = PHASES[Math.floor(t * PHASES.length) % PHASES.length];
   if (req.cycle !== undefined && isFinite(Number(req.cycle))) {
     s.world.tide.cycle = Math.floor(Number(req.cycle));
-    // Jumping the cycle has to run the spawn roll, or the shore would stay bare
-    // until the next natural rollover eight minutes later.
+    // Jumping the cycle has to run the rolls, or the shore stays bare and no
+    // letter ever arrives until the next natural rollover eight minutes later.
     rollSpawns(s, d);
+    rollBottles(s, d, logger);
   }
   s.dirty = true;
   broadcast(d, {
@@ -489,16 +560,50 @@ function handleCommand(
       broadcast(dispatcher, {
         inventory: changedInv(w, step.cost), milestones: done, flags: flagged,
       });
+      note(s, "milestone:" + id);
       logger.info("sealed milestone %s (%s)", id, step.grants);
       break;
     }
     case OP.READ_BOTTLE: {
-      const flag = "read_" + data.bottle_id;
-      w.flags[flag] = true;
+      const id = String(data.bottle_id || "");
+      const bottle = BOTTLES[id];
+      if (!bottle) return;
+      // Only a bottle the sea actually brought, and only once. Whoever opens it
+      // opens it for the world — the other keeper reads the same letter, not a
+      // second copy of it.
+      if (w.bottles[id] !== "washed_up") return;
+      w.bottles[id] = "read";
+      w.flags[bottle.sets_flag] = true;
       s.dirty = true;
+      note(s, "bottle:" + id);
       const fdiff: { [k: string]: boolean } = {};
-      fdiff[flag] = true;
-      broadcast(dispatcher, { flags: fdiff });
+      fdiff[bottle.sets_flag] = true;
+      const bdiff: { [k: string]: string } = {};
+      bdiff[id] = "read";
+      broadcast(dispatcher, { flags: fdiff, bottles: bdiff });
+      logger.info("bottle %s was read", id);
+      break;
+    }
+    case OP.TALK: {
+      const npcId = String(data.npc_id || "");
+      const stages = NPCS[npcId];
+      if (!stages) return;
+      const reached = w.npcs[npcId] || 0;
+      if (reached >= stages.length) return;          // nothing further to say yet
+      const stage = stages[reached];
+      // A stage that is waiting on something simply does not advance; the NPC
+      // still talks, they just have nothing new.
+      if (stage.requires_flag !== "" && !w.flags[stage.requires_flag]) return;
+      w.npcs[npcId] = reached + 1;
+      w.flags[stage.grants_flag] = true;
+      s.dirty = true;
+      note(s, "npc:" + npcId + ":" + (reached + 1));
+      const tflags: { [k: string]: boolean } = {};
+      tflags[stage.grants_flag] = true;
+      const tnpc: { [k: string]: number } = {};
+      tnpc[npcId] = reached + 1;
+      broadcast(dispatcher, { flags: tflags, npcs: tnpc });
+      logger.info("%s reached stage %d (%s)", npcId, reached + 1, stage.grants_flag);
       break;
     }
     case OP.TANDEM: {
@@ -594,8 +699,9 @@ function handleCommand(
       break;
     }
     case OP.LOG_SESSION: {
-      // TODO(M6): assemble a keeper's-log entry from this session's diffs and
-      // append to a storage-backed log list.
+      // Turning in at the bed. The same assembly the empty-world timer runs, so
+      // an evening produces one entry either way.
+      writeLogEntry(s, dispatcher, resolveSlot(s, sessionId, data.slot) || "keeper_a", logger);
       break;
     }
   }
@@ -650,6 +756,7 @@ function advanceTide(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
     // The sea restocks the shore on cycle boundaries, never mid-cycle: the tide
     // is the only clock the world has, and content arrives on it (DESIGN §2).
     rollSpawns(s, dispatcher);
+    rollBottles(s, dispatcher);
   }
   // phase index from t (4 phases per cycle), with rare storm on HIGH.
   const idx = Math.floor(t.t * PHASES.length) % PHASES.length;
@@ -710,6 +817,66 @@ function rollSpawns(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
   }
 }
 
+// --- story: bottles, neighbours, the log ---
+
+/// Remember that something happened tonight. The log is assembled from these.
+function note(s: MatchState, event: string) {
+  if (s.sessionEvents.indexOf(event) < 0) s.sessionEvents.push(event);
+  s.sessionLogged = false;
+}
+
+/// One bottle at most per cycle, drawn by weight from whatever is eligible. The
+/// tide is the delivery mechanism, so nothing arrives off-schedule.
+function rollBottles(s: MatchState, dispatcher: nkruntime.MatchDispatcher, logger?: nkruntime.Logger) {
+  const w = s.world;
+  const eligible: string[] = [];
+  let total = 0;
+  for (const id in BOTTLES) {
+    const b = BOTTLES[id];
+    if (w.bottles[id]) continue;                       // already here, or read
+    if (w.tide.cycle < b.min_tide_cycle) continue;
+    if (b.requires_flag !== "" && !w.flags[b.requires_flag]) continue;
+    eligible.push(id);
+    total += b.weight;
+  }
+  if (logger) logger.info("tide %d brought in %d eligible bottle(s)", w.tide.cycle, eligible.length);
+  if (!eligible.length) return;
+
+  let pick = Math.random() * total;
+  let chosen = eligible[0];
+  for (let i = 0; i < eligible.length; i++) {
+    pick -= BOTTLES[eligible[i]].weight;
+    if (pick <= 0) { chosen = eligible[i]; break; }
+  }
+  w.bottles[chosen] = "washed_up";
+  s.dirty = true;
+  const diff: { [k: string]: string } = {};
+  diff[chosen] = "washed_up";
+  broadcast(dispatcher, { bottles: diff });
+}
+
+/// The evening, written down. Assembled from what actually happened rather than
+/// from anything a client claims, and written at most once per session.
+function writeLogEntry(
+  s: MatchState, dispatcher: nkruntime.MatchDispatcher, by: string, logger?: nkruntime.Logger,
+) {
+  if (logger) {
+    logger.info("log requested: logged=%s events=%d", String(s.sessionLogged), s.sessionEvents.length);
+  }
+  if (s.sessionLogged || !s.sessionEvents.length) return;
+  const entry: LogEntry = {
+    day: s.world.log.length + 1,
+    written_by: by,
+    cycle: s.world.tide.cycle,
+    lines: s.sessionEvents.slice(),
+  };
+  s.world.log.push(entry);
+  s.sessionEvents = [];
+  s.sessionLogged = true;
+  s.dirty = true;
+  broadcast(dispatcher, { log: s.world.log });
+}
+
 // --- helpers ---
 
 function grant(s: MatchState, id: string, n: number) {
@@ -748,6 +915,9 @@ function loadWorld(nk: nkruntime.Nakama, worldId: string): WorldState {
       inventory: stored.inventory || {},
       milestones: stored.milestones || {},
       nodes: stored.nodes || {},
+      bottles: stored.bottles || {},
+      npcs: stored.npcs || {},
+      log: stored.log || [],
       updated_at: stored.updated_at || 0,
     };
   }
@@ -758,6 +928,9 @@ function loadWorld(nk: nkruntime.Nakama, worldId: string): WorldState {
     inventory: {},
     milestones: {},
     nodes: {},
+    bottles: {},
+    npcs: {},
+    log: [],
     updated_at: Date.now(),
   };
 }

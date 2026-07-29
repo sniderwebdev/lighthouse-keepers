@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="NpcDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/npc_def.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+id = "hermit_crab"
+display_name = "Hermit Crab"
+stage_lines = PackedStringArray("TODO_CONTENT_crab_stage_1", "TODO_CONTENT_crab_stage_2")
+idle_line = "TODO_CONTENT_crab_idle"

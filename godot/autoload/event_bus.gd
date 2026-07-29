@@ -27,6 +27,11 @@ signal flag_changed(flag: String, value: bool)
 signal milestone_changed(milestone_id: String, status: String)
 ## A resource node emptied (false) or the sea restocked it (true).
 signal node_changed(node_id: String, ready: bool)
+## A bottle washed in ("washed_up") or was read ("read").
+signal bottle_changed(bottle_id: String, state: String)
+signal npc_stage_changed(npc_id: String, stage: int)
+## The whole book, whenever it grows. Small and rare, so it is sent entire.
+signal log_changed(entries: Array)
 
 ## The tide caught someone. Gentle by design: they wade home and walk slow for a
 ## while, and lose nothing at all (DESIGN §1, pillar 1).
@@ -39,6 +44,11 @@ signal interact_pressed(target: Node)
 ## care which one you are in, but the other keeper's screen does.
 signal room_changed(room: String)
 signal room_change_requested(scene_key: String)
+
+## A keeper opened a bottle, or spoke to somebody, or opened the book.
+signal bottle_reader_requested(bottle_id: String, slot: String, input_prefix: String)
+signal dialogue_requested(npc_id: String, slot: String, input_prefix: String)
+signal log_book_requested(slot: String, input_prefix: String)
 
 ## A keeper read the board in the tower.
 signal milestone_board_requested(slot: String, input_prefix: String)
