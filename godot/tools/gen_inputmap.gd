@@ -3,6 +3,10 @@ extends SceneTree
 ## serialization format. The hand-written dictionary form does NOT parse (actions
 ## register with zero events), so bindings are authored here and saved by the
 ## engine. Run: godot --headless --path godot --script tools/gen_inputmap.gd
+## WARNING: this writes project.godot with ProjectSettings.save(), which drops
+## every comment in the file. Anything explanatory in project.godot has to be put
+## back by hand after a regeneration — check `git diff godot/project.godot` for
+## deleted ';' lines before committing.
 
 const JOY_A := JOY_BUTTON_A
 const JOY_B := JOY_BUTTON_B
@@ -41,7 +45,9 @@ func _build_for_device(device: int, prefix: String) -> void:
 	_button(prefix + "page_next", device, JOY_BUTTON_RIGHT_SHOULDER)
 
 func _add_keyboard_adaptation() -> void:
-	# Keyboard is the adaptation, never the design target. Player 1 only.
+	# Keyboard is the adaptation, never the design target — but couch play with
+	# one pad in the house is the case it exists for, so BOTH keepers get a
+	# keyboard fallback. Left hand drives keeper A, right hand keeper B.
 	_key("move_left", KEY_A)
 	_key("move_right", KEY_D)
 	_key("move_up", KEY_W)
@@ -53,6 +59,21 @@ func _add_keyboard_adaptation() -> void:
 	_key("menu_pause", KEY_F1)
 	_key("page_prev", KEY_BRACKETLEFT)
 	_key("page_next", KEY_BRACKETRIGHT)
+
+	# Keeper B on the right-hand cluster, so two people can share one keyboard —
+	# or one person can take a pad and leave the keyboard to the other.
+	_key("p2_move_left", KEY_LEFT)
+	_key("p2_move_right", KEY_RIGHT)
+	_key("p2_move_up", KEY_UP)
+	_key("p2_move_down", KEY_DOWN)
+	_key("p2_interact", KEY_ENTER)
+	_key("p2_interact", KEY_KP_ENTER)
+	_key("p2_cancel", KEY_SHIFT)
+	_key("p2_use_tool", KEY_SLASH)
+	_key("p2_menu_radial", KEY_PERIOD)
+	_key("p2_menu_pause", KEY_COMMA)
+	_key("p2_page_prev", KEY_SEMICOLON)
+	_key("p2_page_next", KEY_APOSTROPHE)
 
 ## Godot ships ui_accept and ui_cancel bound to the KEYBOARD ONLY. Focus moves
 ## on a d-pad out of the box, but confirm and back do not — so every menu in the
