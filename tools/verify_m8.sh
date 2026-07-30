@@ -169,7 +169,7 @@ STORY=$(grep -nE "BottleDef|MilestoneDef|NpcDef|BottlePickup|MilestonePost|bottl
 [ -z "$STORY" ]
 check "no story class, scene or id appears in feel_test.tscn" $? "${STORY:-none}"
 
-launch_built m8_feel --couch --world=FEL$TAG --scene=feel >/dev/null
+launch_built m8_feel --couch-both --world=FEL$TAG --scene=feel >/dev/null
 sleep 8
 kill_all
 OPENED=$(grep -oE "\[feeltest\] room open .*" "$OUT/m8_feel.log" | tail -1)

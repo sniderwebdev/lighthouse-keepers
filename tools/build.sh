@@ -38,3 +38,4 @@ echo
 echo "Built into $REPO/build/. To play:"
 echo "  docker compose up -d          # the world has to be somewhere"
 echo "  build/windows/LighthouseKeepers.exe --  --couch --world=HARBO"
+echo "  (--couch starts with one keeper; the second joins on first input)"

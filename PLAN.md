@@ -298,7 +298,9 @@ author has run the full five-session arc in couch mode.
 - Godot: open `godot/`, run scene `scenes/boot.tscn` (the nakama-godot addon is
   vendored under `godot/addons/`). Running with no flags gets the title screen;
   `godot --path godot -- --slot=keeper_b --world=HARBO` skips it. Couch mode:
-  `--couch`, or the title-screen toggle.
+  `--couch`, or the title-screen toggle — either way the session starts with ONE
+  keeper and the second joins when a second player first presses something
+  (`--couch-both` claims both up front; that is the harness path, not a human one).
 - Server logs: `docker compose logs -f nakama`.
 - `tools/verify_m0.sh` … `verify_m7.sh` run each milestone's acceptance criteria
   and write evidence to `.m0-evidence/` … `.m7-evidence/`. Each run uses a fresh

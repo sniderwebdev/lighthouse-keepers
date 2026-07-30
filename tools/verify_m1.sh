@@ -93,7 +93,7 @@ echo "=============================================================="
 echo "AC2 — couch: both pads move their own keeper simultaneously;"
 echo "      camera keeps both on screen across the test room"
 echo "=============================================================="
-launch m1_couch --couch --world=COUCH1 --scene=room --autowalk "--trace=$OUT/couch.csv" >/dev/null
+launch m1_couch --couch-both --world=COUCH1 --scene=room --autowalk "--trace=$OUT/couch.csv" >/dev/null
 sleep 33
 kill_all
 

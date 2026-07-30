@@ -19,6 +19,7 @@ enum Op {
 	LOG_SESSION  = 8,   # { }  -> server assembles keeper's log entry
 	CAUGHT       = 9,   # { "slot": String, "zone": String } -> wade home, slow a while
 	TALK         = 10,  # { "npc_id": String, "slot": String } -> advance a neighbour
+	CLAIM        = 11,  # { "slot": String } -> a second player joins mid-session
 }
 
 ## Non-command opcodes. These are not intents and the server does not validate,
@@ -57,6 +58,12 @@ static func advance_step(milestone_id: String) -> Dictionary:
 
 static func read_bottle(bottle_id: String) -> Dictionary:
 	return make(Op.READ_BOTTLE, { "bottle_id": bottle_id })
+
+## Couch drop-in: a second player picks up a pad (or the arrow keys) partway
+## through a session. Which keepers exist is the world's business, so the client
+## asks for the slot rather than helping itself to it.
+static func claim(slot: String) -> Dictionary:
+	return make(Op.CLAIM, { "slot": slot })
 
 static func tandem(gate_id: String, slot: String) -> Dictionary:
 	return make(Op.TANDEM, { "gate_id": gate_id, "slot": slot })

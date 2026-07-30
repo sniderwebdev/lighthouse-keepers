@@ -102,7 +102,7 @@ echo
 echo "=============================================================="
 echo "AC2 — sky tint progresses LOW->HIGH and reads as time passing"
 echo "=============================================================="
-launch m2_sky --couch --world=SKY001 >/dev/null
+launch m2_sky --couch-both --world=SKY001 >/dev/null
 sleep 10
 for T in 0.00 0.06 0.12 0.19 0.25 0.31 0.37 0.44 0.50; do
   set_tide SKY001 "$T" >/dev/null

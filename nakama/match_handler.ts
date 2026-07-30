@@ -24,6 +24,7 @@ const OP = {
   LOG_SESSION: 8,  // request session log entry assembly
   CAUGHT: 9,       // { slot, zone } — "the water reached me". Validated, not trusted.
   TALK: 10,        // { npc_id, slot } — advance an NPC's stage if its conditions hold
+  CLAIM: 11,       // { slot } — a second player on this connection joins mid-session
 
   // Not commands. Where a keeper APPEARS to be is presentation, not authoritative
   // shared state (PLAN.md M1): never validated against the world, never persisted,
@@ -451,7 +452,7 @@ const matchLoop: nkruntime.MatchLoopFunction = (ctx, logger, nk, dispatcher, tic
         continue;
       }
     }
-    handleCommand(s, msg.opCode, data, msg.sender.sessionId, dispatcher, logger);
+    handleCommand(s, msg.opCode, data, msg.sender, dispatcher, logger);
   }
 
   // 3) periodic persistence.
@@ -522,11 +523,45 @@ const matchSignal: nkruntime.MatchSignalFunction = (ctx, logger, nk, d, tick, st
 // --- command handling (the validation layer) ---
 
 function handleCommand(
-  s: MatchState, op: number, data: any, sessionId: string,
+  s: MatchState, op: number, data: any, sender: nkruntime.Presence,
   dispatcher: nkruntime.MatchDispatcher, logger: nkruntime.Logger,
 ) {
   const w = s.world;
+  const sessionId = sender.sessionId;
   switch (op) {
+    // A second player joins a connection that is already in the match — couch
+    // drop-in. Claiming a slot is a real state change (it flips presence, and
+    // presence gates the tide and every tandem gate), so it is a command that
+    // the match validates, not something a client may assume about itself.
+    case OP.CLAIM: {
+      const slot = data.slot;
+      if (SLOTS.indexOf(slot) < 0) {
+        logger.warn("claim of unknown slot %s refused", String(slot));
+        break;
+      }
+      const owner = slotOwner(s, slot);
+      if (owner && owner !== sessionId) {
+        // Someone else is that keeper. Nothing to say to the asker beyond the
+        // presence they already have: the slot is simply not on offer.
+        logger.info("claim of %s refused, held by %s", slot, owner);
+        break;
+      }
+      const held = s.claims[sessionId] || [];
+      if (held.indexOf(slot) >= 0) break;   // already ours; a no-op, not an error
+      held.push(slot);
+      s.claims[sessionId] = held;
+      s.presence[slot] = true;
+      logger.info("session %s claimed %s mid-session in world %s", sessionId, slot, s.worldId);
+      // The grant goes only to the claimer (it is per-connection), the presence
+      // to everyone — same split as matchJoin.
+      dispatcher.broadcastMessage(
+        OP.STATE_DIFF,
+        JSON.stringify({ presence: s.presence, you: { slots: held, world: s.worldId } }),
+        [sender],
+      );
+      broadcast(dispatcher, { presence: s.presence });
+      break;
+    }
     case OP.GATHER: {
       const nodeId = String(data.node_id || "");
       const def = NODES[nodeId];

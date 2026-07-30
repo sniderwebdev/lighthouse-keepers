@@ -85,7 +85,7 @@ awk "BEGIN{exit !($SKEW <= 0.5)}"
 check "the other keeper saw it within 500ms" $? "${SKEW}s between the two clients recording driftwood=3"
 
 echo "  -- couch --"
-launch m3_couch --couch --world=GCH$TAG --autowalk=gather_once >/dev/null
+launch m3_couch --couch-both --world=GCH$TAG --autowalk=gather_once >/dev/null
 sleep 3
 set_tide GCH$TAG 0.0 >/dev/null
 sleep 18

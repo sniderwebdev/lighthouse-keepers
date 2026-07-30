@@ -16,6 +16,10 @@ docker compose up -d
 tools/build.sh                       # -> build/windows/ and build/macos/
 ```
 
+`--couch` starts with ONE keeper in the world. The second appears when the second
+player first touches something — pad 2, or the arrow keys if they are on the
+keyboard. So a session you start alone looks like a session started alone.
+
 Then, on two pads:
 
 ```sh
@@ -27,6 +31,10 @@ build/macos/app/"Lighthouse Keepers.app"/Contents/MacOS/"Lighthouse Keepers" \
 build/macos/app/"Lighthouse Keepers.app"/Contents/MacOS/"Lighthouse Keepers" \
   -- --couch --world=HARBO
 ```
+
+Second player's inputs: pad 2 as normal, or on the keyboard arrows to move,
+`Enter` to interact, `Shift` to back out, `.` for the craft wheel, `/` for the
+basket, `,` to pause. Player one keeps the pad or WASD.
 
 Open the pause menu (Back / F1) → **How it feels** → turn the four values with
 left and right while you play. They apply immediately and survive a relaunch.

@@ -144,21 +144,21 @@ echo "=============================================================="
 echo "AC1c — the same gate on the couch: one pad is still not enough"
 echo "=============================================================="
 COUCH=CCH$TAG
-launch m7_couch_seed --couch --world=$COUCH --debug-harvest >/dev/null
+launch m7_couch_seed --couch-both --world=$COUCH --debug-harvest >/dev/null
 sleep 5
 for C in 1 2 3 4 5 6 7; do set_cycle $COUCH $C; sleep 2.5; done
 sleep 2
 kill_all
-launch m7_couch_make --couch --world=$COUCH --debug-craft=patch_kit,patch_kit,lamp_oil,lamp_oil >/dev/null
+launch m7_couch_make --couch-both --world=$COUCH --debug-craft=patch_kit,patch_kit,lamp_oil,lamp_oil >/dev/null
 sleep 8
 kill_all
-launch m7_couch_chain --couch --world=$COUCH --scene=tower \
+launch m7_couch_chain --couch-both --world=$COUCH --scene=tower \
   --debug-advance=clear_hearth,fix_stairs,repair_glass,restore_lens,relight_lamp >/dev/null
 sleep 10
 kill_all
 
 BEFORE2=$(gate_fires 30s)
-launch m7_couch_one --couch --world=$COUCH --scene=tower --autowalk=crank_alone >/dev/null
+launch m7_couch_one --couch-both --world=$COUCH --scene=tower --autowalk=crank_alone >/dev/null
 sleep 16
 kill_all
 COUCH_SHIMMER=$(grep -oE "\[shimmer\] waiting for keeper [AB]" "$OUT/m7_couch_one.log" | tail -1)
@@ -167,7 +167,7 @@ check "one pad on the couch waits for the other, and nothing fires" $? \
   "${COUCH_SHIMMER:-no shimmer}; gate firings unchanged"
 
 # Now both pads. keeper_b is driven by the p2_ column on the couch.
-launch m7_couch_both --couch --world=$COUCH --scene=tower --autowalk=crank_couch >/dev/null
+launch m7_couch_both --couch-both --world=$COUCH --scene=tower --autowalk=crank_couch >/dev/null
 sleep 18
 kill_all
 COUCH_LIT=$(grep -oE "\[relight\] the lamp is lit" "$OUT/m7_couch_both.log" | tail -1)

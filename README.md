@@ -85,7 +85,8 @@ Launch flags (after a `--` separator when using the CLI):
 | Flag | Effect |
 |---|---|
 | `--slot=keeper_a` / `--slot=keeper_b` | claim one keeper (online play) |
-| `--couch` | claim BOTH slots on one machine, two pads |
+| `--couch` | couch play on one machine: claim keeper A now, keeper B when a second player touches pad 2 or the arrow keys |
+| `--couch-both` | claim BOTH slots immediately, no waiting (what the harness uses — synthesized input has no hands to wait for) |
 | `--world=TEST01` | world code to join (default `TEST01`) |
 | `--host= --port=` | point at a non-local server |
 | `--scene=beach` / `--scene=tower` / `--scene=room` | which space to enter |

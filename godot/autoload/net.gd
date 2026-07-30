@@ -35,6 +35,10 @@ var world_code := ""             ## the human code this connection joined
 var match_id := ""
 var claimed_slots: PackedStringArray = []   ## authoritative — the server confirms these
 var _claim_confirmed := false
+## True when this machine is allowed to pick up the OTHER keeper mid-session —
+## couch play, where the second player may not be sitting down yet. Set by boot
+## from --couch; it never grants a slot, it only permits the asking.
+var couch_dropin := false
 
 ## How long to wait for the match to confirm the slot claim after joining.
 const CLAIM_TIMEOUT := 5.0
@@ -63,6 +67,20 @@ func primary_slot() -> String:
 
 func has_slot(slot: String) -> bool:
 	return claimed_slots.has(slot)
+
+## The keeper this machine has NOT claimed yet, or "" if it holds both. Only
+## meaningful while couch_dropin is on.
+func unclaimed_slot() -> String:
+	if not couch_dropin or claimed_slots.size() != 1:
+		return ""
+	return Command.SLOT_B if claimed_slots[0] == Command.SLOT_A else Command.SLOT_A
+
+## Ask the match for a slot mid-session. The answer arrives as a state diff
+## carrying a new `you.slots`, which is what actually changes claimed_slots.
+func send_claim(slot: String) -> void:
+	if slot == "" or has_slot(slot):
+		return
+	send_command(Command.claim(slot))
 
 ## Authenticate, open the socket, resolve the world code to a match, and claim
 ## keeper slot(s). `slots` is one of SLOTS_A / SLOTS_B / SLOTS_BOTH.
@@ -229,6 +247,7 @@ func _on_presence(event: NakamaRTAPI.MatchPresenceEvent) -> void:
 
 func _on_socket_closed() -> void:
 	claimed_slots = []
+	couch_dropin = false
 	_claim_confirmed = false
 	if status != "error":
 		_set_status("offline")

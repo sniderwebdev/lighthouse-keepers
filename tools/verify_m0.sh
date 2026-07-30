@@ -99,7 +99,7 @@ echo
 echo "=============================================================="
 echo "AC3 — one instance in couch mode claims BOTH slots"
 echo "=============================================================="
-PC=$(launch ac3_couch --couch "--world=$WORLD")
+PC=$(launch ac3_couch --couch-both "--world=$WORLD")
 sleep 12
 C_SLOT=$(grep -oE 'claimed slots keeper_a, keeper_b \(couch' "$OUT/ac3_couch.log" | tail -1)
 [ -n "$C_SLOT" ]

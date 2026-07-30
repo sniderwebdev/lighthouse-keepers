@@ -8,7 +8,9 @@ extends Node
 ## the only thing this scene sends is the initial join.
 ##
 ## Launch flags (either directly or after a `--` separator):
-##   --couch              claim BOTH keeper slots (one machine, two pads)
+##   --couch              couch play: claim keeper A, keeper B drops in on input
+##   --couch-both         claim BOTH slots immediately (harness; no waiting)
+##   --dropin-selftest    with --couch: prove keeper B is absent, then joins
 ##   --slot=keeper_b      claim a specific slot (default keeper_a)
 ##   --world=TEST01       world code to join (default TEST01)
 ##   --host=127.0.0.1 --port=7350
@@ -50,6 +52,8 @@ const DEFAULT_SCENE := "beach"
 
 var _world_code := DEFAULT_WORLD
 var _slots := Net.SLOTS_A
+## Couch: allow the unclaimed keeper to be picked up mid-session.
+var _dropin := false
 var _connecting := false
 var _heartbeat := 0.0
 var _shot_path := ""
@@ -58,6 +62,7 @@ var _autowalk := false
 var _autowalk_route := "tour"
 var _debug_gather: PackedStringArray = []
 var _ui_selftest := false
+var _dropin_selftest := false
 var _tuning_selftest := false
 var _debug_advance: PackedStringArray = []
 var _debug_harvest := false
@@ -85,6 +90,11 @@ func _ready() -> void:
 	_world_label.text = "world:    %s" % _world_code
 	_hint_label.text = "requesting: %s" % _slots
 	_log("boot: world=%s slots=%s host=%s:%d" % [_world_code, _slots, Net.host, Net.port])
+	_log_pads()
+	# Pads get paired mid-session more often than not — somebody wanders in and
+	# picks one up. Logging the arrival is how a playtest report can say which
+	# device a keeper was actually on.
+	Input.joy_connection_changed.connect(_on_joy_connection_changed)
 	if _shot_path != "":
 		_grab_screenshot.call_deferred()
 	# A session started from the command line skips the title: the flags already
@@ -94,6 +104,29 @@ func _ready() -> void:
 		await _join()
 	else:
 		_show_title()
+
+## Which pads exist and what device index they landed on. Device 0 drives the
+## unprefixed actions (keeper A) and device 1 the p2_ set (keeper B), so the index
+## is the whole story about who a pad will move.
+func _log_pads() -> void:
+	var pads := Input.get_connected_joypads()
+	if pads.is_empty():
+		_log("pads: none connected (keyboard only — WASD is keeper A, arrows keeper B)")
+		return
+	var parts: PackedStringArray = []
+	for device in pads:
+		parts.append("device %d = %s -> %s" % [
+			device, Input.get_joy_name(device),
+			"keeper A" if device == 0 else ("keeper B" if device == 1 else "unused"),
+		])
+	_log("pads: %s" % "; ".join(parts))
+
+func _on_joy_connection_changed(device: int, connected: bool) -> void:
+	_log("pad %s: device %d%s" % [
+		"connected" if connected else "disconnected", device,
+		" (%s)" % Input.get_joy_name(device) if connected else "",
+	])
+	_log_pads()
 
 func _show_title() -> void:
 	var title: TitleScreen = preload("res://ui/title_screen.tscn").instantiate()
@@ -106,7 +139,14 @@ func _show_title() -> void:
 
 func _on_title_start(world_code: String, slots: String) -> void:
 	_world_code = world_code
-	_slots = slots
+	# Picking couch on the title screen means "two of us here", not "both of us
+	# are already holding something" — so it takes keeper A and leaves B to be
+	# dropped into, same as the --couch flag.
+	if slots == Net.SLOTS_BOTH:
+		_slots = Net.SLOTS_A
+		_dropin = true
+	else:
+		_slots = slots
 	%DebugLayer.visible = _debug_visible
 	_world_label.text = "world:    %s" % _world_code
 	%TitleLayer.get_child(0).queue_free()
@@ -129,7 +169,17 @@ func _parse_flags() -> void:
 	args.append_array(OS.get_cmdline_user_args())
 	for arg in args:
 		if arg == "--couch":
+			# Couch play, second player not necessarily sitting down yet: take
+			# keeper A now and let keeper B be claimed by whoever picks up the
+			# second pad or the arrow keys.
+			_slots = Net.SLOTS_A
+			_dropin = true
+			_skip_title = true
+		elif arg == "--couch-both":
+			# Both keepers up front. The harness needs this: synthesized input
+			# drives both slots from frame one and has no hands to wait for.
 			_slots = Net.SLOTS_BOTH
+			_dropin = false
 			_skip_title = true
 		elif arg.begins_with("--slot="):
 			_slots = _normalize_slot(arg.split("=", true, 1)[1])
@@ -160,6 +210,8 @@ func _parse_flags() -> void:
 			_tuning_selftest = true
 		elif arg == "--ui-selftest":
 			_ui_selftest = true
+		elif arg == "--dropin-selftest":
+			_dropin_selftest = true
 		elif arg == "--debug-harvest":
 			_debug_harvest = true
 		elif arg.begins_with("--debug-craft="):
@@ -186,6 +238,7 @@ func _join() -> void:
 	if _connecting:
 		return
 	_connecting = true
+	Net.couch_dropin = _dropin
 	var joined: bool = await Net.connect_and_join(_world_code, _slots)
 	_connecting = false
 	_log("join %s" % ("ok" if joined else "FAILED: " + Net.last_error))
@@ -240,12 +293,62 @@ func _enter_world() -> void:
 		_log("debug: harvesting whatever washes in")
 	if _ui_selftest:
 		_run_ui_selftest(menus)
+	if _dropin_selftest:
+		_run_dropin_selftest()
 	if _tuning_selftest:
 		_run_tuning_selftest(menus)
-	_log("world entered: %s (%s)" % [_scene, "couch" if Net.is_couch() else "online"])
+	_log("world entered: %s (%s)" % [_scene, _mode_label()])
+
+## What kind of session this is, for the log. "couch, solo so far" is the drop-in
+## state: this machine expects a second player who has not arrived.
+func _mode_label() -> String:
+	if Net.is_couch():
+		return "couch"
+	return "couch, solo so far" if Net.couch_dropin else "online"
 
 ## Drives the basket with the REAL actions a pad would send, so what it proves is
 ## that the grid answers a d-pad rather than that some method could be called.
+## Couch drop-in, start to finish, without hands: report the world with one
+## keeper in it, synthesize a press on the second input set, report it again.
+## Both reports name is_local and visible, because "the twin is gone" is a claim
+## about what is ON SCREEN and presence alone would not prove it.
+func _run_dropin_selftest() -> void:
+	await get_tree().create_timer(1.0).timeout
+	_report_dropin("before")
+	var slot := Net.unclaimed_slot()
+	if slot == "":
+		_log("[dropin] nothing to claim — is this --couch? (got slots=%s dropin=%s)" % [
+			", ".join(Net.claimed_slots), Net.couch_dropin,
+		])
+		return
+	# A real input EVENT, not Input.action_press: the watcher reads
+	# is_action_just_pressed, which is edge-triggered and never sees a state poke.
+	# A physical button produces an event, so the test has to produce one too.
+	var down := InputEventAction.new()
+	down.action = "p2_interact"
+	down.pressed = true
+	Input.parse_input_event(down)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var up := InputEventAction.new()
+	up.action = "p2_interact"
+	up.pressed = false
+	Input.parse_input_event(up)
+	await get_tree().create_timer(1.5).timeout
+	_report_dropin("after")
+
+func _report_dropin(label: String) -> void:
+	var world := _world as PlayableWorld
+	var keeper: Keeper = world.keeper_for(Command.SLOT_B) if world != null else null
+	_log("[dropin:%s] claimed=[%s] presence=[a=%s b=%s] keeper_b.is_local=%s keeper_b.visible=%s keeper_b.input=%s" % [
+		label, ", ".join(Net.claimed_slots),
+		WorldState.presence.get(Command.SLOT_A, false),
+		WorldState.presence.get(Command.SLOT_B, false),
+		keeper != null and keeper.is_local,
+		keeper != null and keeper.visible,
+		"none" if keeper == null else ("p2_" if keeper.input_prefix == "p2_" else "default"),
+	])
+
 func _run_ui_selftest(menus: GameMenus) -> void:
 	await get_tree().create_timer(2.0).timeout
 	_log("uitest: holding menu_radial")
@@ -371,7 +474,9 @@ func _on_status_changed(status: String) -> void:
 	_log("status -> %s" % status)
 
 func _on_slots_claimed(slots: PackedStringArray) -> void:
-	var mode := "couch (both pads)" if slots.size() == 2 else "online"
+	var mode := "couch (both pads)" if slots.size() == 2 else (
+		"couch (waiting for player 2)" if Net.couch_dropin else "online"
+	)
 	_slots_label.text = "claimed:  %s  [%s]" % [", ".join(slots), mode]
 	_hint_label.text = "%s  ·  hold %s for the basket" % [
 		ButtonGlyphs.prompt("menu_pause", "menu"), ButtonGlyphs.label_for("menu_radial"),

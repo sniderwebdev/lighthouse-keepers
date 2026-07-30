@@ -10,6 +10,11 @@ class_name PlayableWorld
 ## Couch and online differ here in exactly two places: how many keepers are local,
 ## and what the camera is asked to frame.
 ##
+## In couch play the second keeper may not have a person behind it yet, so this
+## watches the second input set and asks the match for the slot when somebody
+## touches it (CLAIM). Until then that keeper is a mirror of nobody and stays
+## off screen, exactly as a not-yet-connected online partner does.
+##
 ## Whether a keeper is on screen is the keeper's own business, not the world's —
 ## it depends on having received a pose, which only the keeper knows about.
 
@@ -36,7 +41,20 @@ const SHEET_B: Texture2D = preload("res://art/placeholder/keeper_b.png")
 ## than from joining. Static because it has to survive the scene being replaced.
 static var entered_by_door := false
 
+## Actions on the second input set. Any of them is somebody saying "I'm here".
+const DROPIN_ACTIONS: PackedStringArray = [
+	"p2_move_left", "p2_move_right", "p2_move_up", "p2_move_down",
+	"p2_interact", "p2_use_tool", "p2_menu_radial",
+]
+
 var _keepers: Dictionary = {}   ## slot -> Keeper
+## Seconds to wait before asking again. A CLAIM can be refused (the other keeper
+## is someone else's, online), and a refusal is silent by design — so this is a
+## cooldown rather than a latch, or one refusal would mean never asking again
+## even after that player leaves.
+const DROPIN_RETRY := 2.0
+var _dropin_cooldown := 0.0
+var _modal_open := false
 var _trace: FileAccess = null
 var _trace_clock := 0.0
 
@@ -44,16 +62,66 @@ func _ready() -> void:
 	_spawn_keepers()
 	_camera.apply_room_bounds(room)
 	_camera.set_targets(_local_keepers())
+	EventBus.net_slots_claimed.connect(_on_slots_claimed)
+	EventBus.ui_modal_changed.connect(_on_ui_modal_changed)
 	_open_trace()
+
+func _process(delta: float) -> void:
+	_dropin_cooldown = maxf(0.0, _dropin_cooldown - delta)
+	_watch_for_second_player()
+
+## `p2_cancel` and `p2_menu_pause` are deliberately NOT drop-in triggers, and
+## nothing counts while a menu is open: on a keyboard the second input set shares
+## keys with menu navigation, so player one paging through the pause menu with the
+## arrows must not silently conscript a second keeper.
+func _watch_for_second_player() -> void:
+	if _dropin_cooldown > 0.0 or _modal_open:
+		return
+	var slot := Net.unclaimed_slot()
+	if slot == "":
+		return
+	for action in DROPIN_ACTIONS:
+		if Input.is_action_just_pressed(action):
+			_dropin_cooldown = DROPIN_RETRY
+			print("%.3f [dropin] second player pressed %s, claiming %s" % [
+				Time.get_unix_time_from_system(), action, slot,
+			])
+			Net.send_claim(slot)
+			return
+
+func _on_ui_modal_changed(open: bool) -> void:
+	_modal_open = open
+
+## The match granted a slot. If it is one we were mirroring, it has a person
+## behind it now — hand it its input set and put it on screen.
+func _on_slots_claimed(_slots: PackedStringArray) -> void:
+	_dropin_cooldown = 0.0
+	for slot in [Command.SLOT_A, Command.SLOT_B]:
+		var keeper: Keeper = _keepers.get(slot)
+		if keeper == null or keeper.is_local or not Net.has_slot(slot):
+			continue
+		keeper.position = _spawn_for(slot)
+		keeper.become_local(_input_prefix_for(slot))
+		print("%.3f [dropin] %s is local now (input %s)" % [
+			Time.get_unix_time_from_system(), slot,
+			"pad 2 / arrows" if keeper.input_prefix == "p2_" else "pad 1 / WASD",
+		])
+	_camera.set_targets(_local_keepers())
+
+## Where a keeper belongs when the world has to place it: just inside the door if
+## we walked in, otherwise this scene's opening spawn. Used both at _ready and
+## when a drop-in keeper first appears.
+func _spawn_for(slot: String) -> Vector2:
+	var door := get_node_or_null(arrival) as Node2D
+	if door != null and PlayableWorld.entered_by_door:
+		return door.position + (Vector2.ZERO if slot == Command.SLOT_A else Vector2(24, 0))
+	return _spawn_a.position if slot == Command.SLOT_A else _spawn_b.position
 
 func _spawn_keepers() -> void:
 	# Arriving through a door puts you just inside it, not back at the world's
 	# opening spawn.
-	var door := get_node_or_null(arrival) as Node2D
-	var a: Vector2 = door.position if door != null and PlayableWorld.entered_by_door else _spawn_a.position
-	var b: Vector2 = (door.position + Vector2(24, 0)) if door != null and PlayableWorld.entered_by_door else _spawn_b.position
-	_spawn(Command.SLOT_A, SHEET_A, a)
-	_spawn(Command.SLOT_B, SHEET_B, b)
+	_spawn(Command.SLOT_A, SHEET_A, _spawn_for(Command.SLOT_A))
+	_spawn(Command.SLOT_B, SHEET_B, _spawn_for(Command.SLOT_B))
 
 func _spawn(slot: String, sheet: Texture2D, at: Vector2) -> void:
 	var keeper: Keeper = KEEPER_SCENE.instantiate()
@@ -72,8 +140,12 @@ func _spawn(slot: String, sheet: Texture2D, at: Vector2) -> void:
 
 ## Device 0 drives the slot you picked at session start; device 1 drives the
 ## other one, and only exists on the couch (CLAUDE.md controller-first law).
+##
+## Keyed off the SLOT, not off how many slots are claimed, so it gives the same
+## answer before and after a drop-in — a machine expecting a second player has
+## already reserved the second input set for them.
 func _input_prefix_for(slot: String) -> String:
-	if not Net.is_couch():
+	if not Net.is_couch() and not Net.couch_dropin:
 		return ""
 	return "" if slot == Command.SLOT_A else "p2_"
 

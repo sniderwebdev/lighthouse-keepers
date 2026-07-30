@@ -108,6 +108,27 @@ func _physics_process(delta: float) -> void:
 	else:
 		_replay(delta)
 
+## Couch drop-in: this keeper was a mirror waiting for a partner who has now sat
+## down at THIS machine. Stop replaying poses, start reading a pad.
+##
+## Deliberately one-way. A keeper never goes back to being remote, because the
+## only thing that could take the slot away is losing it — and losing it drops
+## the connection, which rebuilds the world from scratch anyway.
+func become_local(prefix: String) -> void:
+	if is_local:
+		return
+	is_local = true
+	input_prefix = prefix
+	if EventBus.keeper_pose_received.is_connected(_on_pose_received):
+		EventBus.keeper_pose_received.disconnect(_on_pose_received)
+	if EventBus.keeper_presence_changed.is_connected(_on_presence_changed):
+		EventBus.keeper_presence_changed.disconnect(_on_presence_changed)
+	# A local keeper is always here; it is the source of poses, not a consumer.
+	_buffer.clear()
+	_has_pose = true
+	_elsewhere = false
+	_update_visibility()
+
 # --- local: read the pad, move, publish ---
 
 func _drive(delta: float) -> void:
