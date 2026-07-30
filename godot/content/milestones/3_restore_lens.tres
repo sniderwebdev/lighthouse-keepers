@@ -6,6 +6,7 @@
 script = ExtResource("1_def")
 id = "restore_lens"
 display_name = "Restore the Lens"
+description = "A lens is just glass that learned to reach. This one has forgotten. Remind it."
 required_flags = PackedStringArray("glass_repaired")
 cost = {"brass_scrap": 3, "glass_shard": 2}
 on_complete_flags = PackedStringArray("lens_restored")

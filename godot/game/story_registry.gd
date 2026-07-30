@@ -6,8 +6,9 @@ class_name StoryRegistry
 ## bottle washes in, whether it has already been read, which stage a neighbour is
 ## on. This copy is what the reader and the dialogue box put on screen.
 ##
-## The letters and the crab's lines are TODO_CONTENT on purpose: they are the
-## personal ones, and CLAUDE.md reserves them for the author.
+## The letters and the crab's lines are authored in CONTENT.md and live in the
+## .tres files verbatim. The [SWAP]/[PERSONAL] slots inside them are still the
+## author's; see STATUS.md for which remain unfilled.
 
 const BOTTLE_DIR := "res://content/bottles"
 const NPC_DIR := "res://content/npcs"
@@ -30,16 +31,55 @@ static func bottle_ids() -> PackedStringArray:
 	ids.sort()
 	return ids
 
-## What the crab has to say right now: the line for the stage you are about to
-## have, or the idle line when they are waiting on something.
-static func npc_line(npc_id: String) -> String:
+## What the crab has to say right now, as a sequence the box steps through.
+##
+## Stage 0 is meeting them. After that the server's stage index selects the
+## delivery beat for the stage just reached. When there is nothing new, they
+## idle — and once the lamp is burning the idle changes, because that is the one
+## thing in Act 1 the crab admits to noticing.
+static func npc_lines(npc_id: String) -> PackedStringArray:
 	var def := npc(npc_id)
 	if def == null:
-		return ""
+		return PackedStringArray()
+	var beats := _beats(def)
+	if beats.is_empty():
+		return PackedStringArray()
 	var stage := WorldState.npc_stage(npc_id)
-	if stage < def.stage_lines.size():
-		return def.stage_lines[stage]
-	return def.idle_line
+	# The stage index counts beats COMPLETED, so the one that just landed is the
+	# one before it. Before the first talk resolves there is nothing behind us,
+	# so the meeting stands.
+	if stage <= 0:
+		return beats[0]
+	if stage - 1 < beats.size():
+		return beats[stage - 1]
+	# Everything said. Now they idle — and the lamp changes what idling sounds
+	# like, because it is the one thing in Act 1 the crab admits to noticing.
+	if WorldState.flags.get("lamp_lit", false) and not def.idle_after_lamp_lit.is_empty():
+		return def.idle_after_lamp_lit
+	if def.idle_lines.is_empty():
+		return PackedStringArray()
+	# Rotates on the tide rather than at random: the same visit says the same
+	# thing, and a later one has moved on.
+	var idx: int = int(WorldState.tide.get("cycle", 0)) % def.idle_lines.size()
+	return PackedStringArray([def.idle_lines[idx]])
+
+## First line only — kept for callers that just want something to show.
+static func npc_line(npc_id: String) -> String:
+	var lines := npc_lines(npc_id)
+	return lines[0] if lines.size() > 0 else ""
+
+## Meeting first, then the ask/deliver pairs in order. Mirrors the server's
+## stage list exactly (match_handler.ts NPCS) — the two must not drift.
+static func _beats(def: NpcDef) -> Array[PackedStringArray]:
+	var beats: Array[PackedStringArray] = []
+	if not def.first_meeting.is_empty():
+		beats.append(def.first_meeting)
+	for i in maxi(def.stage_asks.size(), def.stage_deliveries.size()):
+		if i < def.stage_asks.size():
+			beats.append(def.stage_asks[i])
+		if i < def.stage_deliveries.size():
+			beats.append(def.stage_deliveries[i])
+	return beats
 
 static func _ensure_loaded() -> void:
 	if _loaded:

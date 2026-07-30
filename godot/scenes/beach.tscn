@@ -311,6 +311,12 @@ position = Vector2(250, 200)
 marker_id = "fish_stub_01"
 face = Vector2(-1, 0)
 
+[node name="tm_smooth_stone_01" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(216, 214)
+marker_id = "smooth_stone_01"
+face = Vector2(-1, 0)
+
 [node name="tm_hermit_crab" type="Marker2D" parent="."]
 script = ExtResource("99_marker")
 position = Vector2(680, 470)
@@ -416,6 +422,11 @@ bottle_id = "bottle_03"
 position = Vector2(230, 200)
 node_id = "fish_stub_01"
 item_id = "fish_stub"
+
+[node name="smooth_stone_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(196, 214)
+node_id = "smooth_stone_01"
+item_id = "smooth_stone"
 
 [node name="hermit_crab" parent="Actors" instance=ExtResource("9_npc")]
 position = Vector2(660, 470)

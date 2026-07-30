@@ -101,8 +101,12 @@ const BOTTLES: { [id: string]: BottleDef } = {
 // The neighbours. Each stage is a small ask, a reveal, and something you can now
 // do (DESIGN §4, axis 3) — here, the stage that teaches you a recipe.
 interface NpcStage {
-  requires_flag: string;   // "" = nothing to wait for
+  requires_flag: string;
   grants_flag: string;
+  /// An item this stage wants handed over. The stage does not advance until it
+  /// is in the shared basket, and handing it over spends it — "bring me a
+  /// smooth stone" is not rhetorical.
+  needs_item?: string;
 }
 // The co-op gates. Reserved for climaxes only (DESIGN §5): never for routine
 // progress, because gating the ordinary on both of you being online is how a
@@ -117,11 +121,27 @@ const GATES: { [id: string]: GateDef } = {
   relight_lamp: { requires_flag: "lamp_ready", grants_flag: "lamp_lit" },
 };
 
+// The crab in full (CONTENT.md): meet him, then two ask/deliver pairs. Each
+// pair is a small errand that ends in a recipe, so the neighbour axis and the
+// crafting axis advance together (DESIGN §4).
+//
+// The asks gate on restoration flags and the deliveries gate on the item, so
+// the order is: clear_hearth -> he asks for a stone -> you bring it and he
+// teaches patch_kit -> patch_kit lets you fix_stairs -> he asks for a fish ->
+// you bring it and he teaches chowder.
 const NPCS: { [id: string]: NpcStage[] } = {
   hermit_crab: [
     { requires_flag: "", grants_flag: "crab_met" },
-    // Stage two hands over a recipe, which is what unlocks it in the wheel.
-    { requires_flag: "hearth_lit", grants_flag: "crab_taught_chowder" },
+    { requires_flag: "hearth_lit", grants_flag: "crab_asked_stone" },
+    {
+      requires_flag: "crab_asked_stone", grants_flag: "crab_taught_patch_kit",
+      needs_item: "smooth_stone",
+    },
+    { requires_flag: "stairs_fixed", grants_flag: "crab_asked_fish" },
+    {
+      requires_flag: "crab_asked_fish", grants_flag: "crab_taught_chowder",
+      needs_item: "fish_stub",
+    },
   ],
 };
 
@@ -146,11 +166,11 @@ const NODES: { [id: string]: NodeDef } = {
   brass_scrap_01: { item: "brass_scrap", yield: 1, zone: "sandbar", respawn_cycles: 2 },
   glass_shard_01: { item: "glass_shard", yield: 1, zone: "sandbar", respawn_cycles: 2 },
   glass_shard_02: { item: "glass_shard", yield: 1, zone: "mid_beach", respawn_cycles: 2 },
-  // TODO_CONTENT: lamp_oil needs fish (PLAN.md M4) and nothing in PLAN or DESIGN
-  // says where fish come from. Placed here as a tide pool so Act One can be
-  // finished; if fishing, or the crab, or a trap is meant to be the source, this
-  // row is what should be replaced.
+  // CANON (CONTENT.md): fish come from the tide pools at LOW tide. Fishing as an
+  // activity is an Act 2 candidate, deliberately not built now.
   fish_stub_01: { item: "fish_stub", yield: 2, zone: "sandbar", respawn_cycles: 1 },
+  // "Bring me a smooth stone from the pools. Low tide." — the crab, CONTENT.md.
+  smooth_stone_01: { item: "smooth_stone", yield: 1, zone: "sandbar", respawn_cycles: 1 },
 };
 
 interface TideState {
@@ -236,10 +256,9 @@ interface Pose {
 // only there to draw the wheel and grey out what it already knows will be
 // refused. Values are PLAN.md's, verbatim.
 //
-// `chowder` has no costs anywhere in PLAN or DESIGN, so it ships locked behind a
-// TODO_CONTENT flag rather than with numbers nobody chose. It will not craft:
-// the input it asks for does not exist, which is the honest state of a recipe
-// whose recipe has not been written yet.
+// `chowder` costs 1 fish + 2 kelp (CONTENT.md) and stays gated on
+// `crab_taught_chowder`: the crab hands it over, and the handing over is the
+// point of the scene.
 interface RecipeDef {
   inputs: { [k: string]: number };
   out: string;
@@ -250,15 +269,22 @@ interface RecipeDef {
 const RECIPES: { [id: string]: RecipeDef } = {
   patch_kit: {
     inputs: { driftwood: 3, kelp: 1 }, out: "patch_kit", n: 1,
-    station: "workbench", unlock_flag: "",
+    station: "workbench", unlock_flag: "crab_taught_patch_kit",
   },
   lamp_oil: {
     inputs: { kelp: 2, fish_stub: 1 }, out: "lamp_oil", n: 1,
     station: "workbench", unlock_flag: "",
   },
   chowder: {
-    inputs: { TODO_CONTENT: 1 }, out: "chowder", n: 1,
+    inputs: { fish_stub: 1, kelp: 2 }, out: "chowder", n: 1,
     station: "stove", unlock_flag: "crab_taught_chowder",
+  },
+  // Adopted from the radial mock (CONTENT.md): the one name on it that was
+  // real. Ungated on purpose — it is the small comforting thing you can always
+  // make, and the letters lean on it.
+  kelp_tea: {
+    inputs: { kelp: 2 }, out: "kelp_tea", n: 1,
+    station: "stove", unlock_flag: "",
   },
 };
 // The restoration chain. Costs and order are PLAN.md's, verbatim; this table
@@ -486,6 +512,20 @@ const matchSignal: nkruntime.MatchSignalFunction = (ctx, logger, nk, d, tick, st
   }
   // Dev only, like set_tide: the cycle length is a feel value and this is how a
   // playtest turns it without an editor.
+  // Dev only. Verifiers that exercise a MECHANIC should not have to play the
+  // story that unlocks it: M4 tests the crafting wheel, and the wheel does not
+  // care which recipe taught it. Sets one story flag, nothing else.
+  if (req.op === "set_flag") {
+    const flag = String(req.flag || "");
+    if (!/^[a-z0-9_]{3,40}$/.test(flag)) {
+      return { state: s, data: JSON.stringify({ ok: false, error: "bad flag name" }) };
+    }
+    s.world.flags[flag] = req.value !== false;
+    s.dirty = true;
+    broadcast(d, { flags: s.world.flags });
+    logger.warn("DEV: flag %s of %s set to %s", flag, s.worldId, String(s.world.flags[flag]));
+    return { state: s, data: JSON.stringify({ ok: true, flag: flag }) };
+  }
   if (req.op === "set_cycle_seconds") {
     const secs = Number(req.seconds);
     if (!isFinite(secs) || secs < 10 || secs > 7200) {
@@ -602,7 +642,7 @@ function handleCommand(
       touchedCraft[r.out] = 0;
       s.dirty = true;
       broadcast(dispatcher, { inventory: changedInv(w, touchedCraft) });
-      logger.info("crafted %s at the %s", data.recipe_id, r.station || "hands");
+      logger.info("crafted %s at the %s in %s", data.recipe_id, r.station || "hands", s.worldId);
       break;
     }
     case OP.ADVANCE_STEP: {
@@ -662,6 +702,13 @@ function handleCommand(
       // A stage that is waiting on something simply does not advance; the NPC
       // still talks, they just have nothing new.
       if (stage.requires_flag !== "" && !w.flags[stage.requires_flag]) return;
+      // An errand stage wants the thing in hand. Not having it is not an error
+      // — he simply asks again next time you come down.
+      const wanted = stage.needs_item || "";
+      if (wanted !== "" && (w.inventory[wanted] || 0) < 1) {
+        logger.info("%s stage %d still waiting on %s in %s", npcId, reached, wanted, s.worldId);
+        return;
+      }
       w.npcs[npcId] = reached + 1;
       w.flags[stage.grants_flag] = true;
       s.dirty = true;
@@ -670,7 +717,15 @@ function handleCommand(
       tflags[stage.grants_flag] = true;
       const tnpc: { [k: string]: number } = {};
       tnpc[npcId] = reached + 1;
-      broadcast(dispatcher, { flags: tflags, npcs: tnpc });
+      const tdiff: { [k: string]: any } = { flags: tflags, npcs: tnpc };
+      if (wanted !== "") {
+        // Handing it over spends it. "Bring me a stone" is not rhetorical.
+        const spent: { [k: string]: number } = {};
+        spent[wanted] = 1;
+        grant(s, wanted, -1);
+        tdiff.inventory = changedInv(w, spent);
+      }
+      broadcast(dispatcher, tdiff);
       logger.info("%s reached stage %d (%s) in %s", npcId, reached + 1, stage.grants_flag, s.worldId);
       break;
     }

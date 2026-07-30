@@ -4,9 +4,9 @@
 
 [resource]
 script = ExtResource("1_def")
-id = "chowder"
-inputs = {"fish_stub": 1, "kelp": 2}
-output_id = "chowder"
+id = "kelp_tea"
+inputs = {"kelp": 2}
+output_id = "kelp_tea"
 output_count = 1
 station = "stove"
-unlock_flag = "crab_taught_chowder"
+unlock_flag = ""

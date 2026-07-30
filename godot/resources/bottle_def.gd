@@ -7,6 +7,10 @@ class_name BottleDef
 @export var id: String
 @export var chapter: int = 1
 @export var text_key: String          # localization / content key for the letter
+## The letter itself, authored in CONTENT.md and copied here verbatim. Blank
+## lines separate paragraphs; the reader groups them into pages. Any
+## "[SWAP - ...]" line is an author slot still carrying its default.
+@export_multiline var body: String = ""
 @export var sets_flag: String         # story flag set on read
 @export var requires_flag: String     # "" or a flag that must be set to spawn
 @export var spawn_weight: float = 1.0

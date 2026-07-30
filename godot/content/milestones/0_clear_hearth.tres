@@ -6,6 +6,7 @@
 script = ExtResource("1_def")
 id = "clear_hearth"
 display_name = "Clear the Hearth"
+description = "Ash and old nests. Under them, a hearth that remembers how."
 required_flags = PackedStringArray()
 cost = {"driftwood": 4}
 on_complete_flags = PackedStringArray("hearth_lit")

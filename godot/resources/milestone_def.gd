@@ -5,6 +5,8 @@ class_name MilestoneDef
 ## visual swap (set_visual_state) so the lighthouse transforms as you progress.
 @export var id: String
 @export var display_name: String
+## Board flavour, authored in CONTENT.md. One or two lines; shown on the card.
+@export_multiline var description: String = ""
 @export var required_flags: PackedStringArray   # must all be true to start
 @export var cost: Dictionary                     # item_id -> count
 @export var on_complete_flags: PackedStringArray # set true when finished

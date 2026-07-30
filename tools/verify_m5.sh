@@ -92,7 +92,9 @@ check "the chain remembers which step is sealed" $? "${STILL:-no tower line}"
 echo
 echo "=============================================================="
 echo "AC2 — steps enforce order SERVER-side: repair_glass cannot be"
-echo "      funded before fix_stairs, even with the resources"
+echo "      funded before fix_stairs, even with the resources."
+echo "      The Act 1 chain is now clear_hearth -> crab stage 1 (stone)"
+echo "      -> patch_kit -> fix_stairs, because patch_kit is taught, not known."
 echo "=============================================================="
 # A basket with everything repair_glass asks for, and the step before it unsealed.
 launch m5_order --slot=keeper_a --world=ORD$TAG --scene=tower \

@@ -57,6 +57,14 @@ set_cycle() {
     -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":0.0,\\\"cycle\\\":$2}\"" >/dev/null
 }
 
+# patch_kit is TAUGHT by the crab now (CONTENT.md). M8's subject is the BUILT
+# BINARY, not the crab's errands, so put the world into the taught state.
+teach() { # teach <world>
+  curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\"" >/dev/null
+}
+
 echo "=============================================================="
 echo "AC1 — a full-content playthrough runs from a BUILT binary,"
 echo "      not just the editor"
@@ -70,6 +78,9 @@ check "the macOS build exists and can be run here" $? "$(basename "$(dirname "$(
 PLAY=BLT$TAG
 launch_built m8_harvest --slot=keeper_a --world=$PLAY --debug-harvest >/dev/null
 sleep 6
+# While this world is live: the next run crafts at world entry, too early for
+# an RPC aimed at it to land first.
+teach $PLAY
 for C in 1 2 3 4 5 6 7; do set_cycle $PLAY $C; sleep 2.2; done
 sleep 2
 kill_all

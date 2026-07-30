@@ -6,6 +6,7 @@
 script = ExtResource("1_def")
 id = "fix_stairs"
 display_name = "Fix the Stairs"
+description = "Eleven steps, four of them liars. The lamp room is worth the climb."
 required_flags = PackedStringArray("hearth_lit")
 cost = {"driftwood": 6, "patch_kit": 1}
 on_complete_flags = PackedStringArray("stairs_fixed")

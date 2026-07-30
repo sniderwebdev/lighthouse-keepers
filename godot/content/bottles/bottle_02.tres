@@ -6,7 +6,8 @@
 script = ExtResource("1_def")
 id = "bottle_02"
 chapter = 2
-text_key = "TODO_CONTENT_bottle_02"
+text_key = "letter_bottle_02"
+body = "You found the first one. Or you didn't, and I'm talking to the water again. I do that more than I'd like to admit now.\n\nHere's the part I've never told a living soul. Nine years I kept this light alone. You send that beam out every night over the black, and nothing — nothing — ever sends anything back. A light no one answers is just a fire. You can live with that. You tell yourself you can.\n\nThird winter. Out past the shoal, where the old wreck lies. Something answered.\n\nThree flashes. A pause, long as a held breath. Three more. I counted the seconds like you count between lightning and thunder — to know how far away a thing is. Nine seconds. Close enough to row to. Far enough to doubt.\n\nIt only speaks on the low tide. I've charted every place it speaks from. Every chart points at the wreck.\n\nWatch the water past the shoal tonight. Just once. Somebody besides me has to see it. Somebody has to tell me I'm not —\n\nJust watch.\n\n— E."
 sets_flag = "read_bottle_02"
 requires_flag = "read_bottle_01"
 spawn_weight = 1.0

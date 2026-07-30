@@ -6,7 +6,8 @@
 script = ExtResource("1_def")
 id = "bottle_03"
 chapter = 3
-text_key = "TODO_CONTENT_bottle_03"
+text_key = "letter_bottle_03"
+body = "Last one. The boat's packed. Tide turns in an hour and I'm going to be on it.\n\nI know how this looks. A man alone too long, rowing out at dusk after a light in the water. Maybe that's all this is. But I've been answered, friend. Do you know what that's worth, after nine years of nothing? I can't unhear it. I won't.\n\nThe lamp is yours now. It was never really mine anyway — a light belongs to whoever it brings home. The lens wants oil. The crank sticks unless two hands turn it. It always wanted two hands. I only ever had the one pair.\n\nKeep it lit for each other. That's the whole trick of it. Everything else is weather.\n\nIf no one ever reads these — then the sea heard me, and that'll have to do.\n\nBut if you're real, and you ever come looking — start at the wreck.\n\nSomething out there is answering. It's my turn to answer back.\n\n— Elio. Keeper. Retired, as of the next tide."
 sets_flag = "read_bottle_03"
 requires_flag = "read_bottle_02"
 spawn_weight = 1.0

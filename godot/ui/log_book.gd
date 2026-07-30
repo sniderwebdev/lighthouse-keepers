@@ -146,17 +146,68 @@ func _show_entry(index: int) -> void:
 		return
 	var entry: Dictionary = entries[index]
 	_title.text = "Day %d" % int(entry.get("day", index + 1))
-	# The templates that turn these into sentences are the author's to write, so
-	# the book shows what happened rather than putting words in her mouth.
-	var lines: PackedStringArray = []
-	for event in entry.get("lines", []):
-		lines.append("TODO_CONTENT · %s" % String(event))
-	_body.text = "\n".join(lines)
+	_body.text = "\n".join(_sentences_for(entry, index))
 	var by := String(entry.get("written_by", ""))
 	_byline.text = "written by %s · cycle %d" % [
 		"A" if by == Command.SLOT_A else "B", int(entry.get("cycle", 0)),
 	]
 	_log("reading entry %d" % (index + 1))
+
+## One HIGHLIGHT, then a CLOSER on roughly every third entry (CONTENT.md).
+##
+## The server records bare event ids; these are the author's sentences for them.
+## An event with no authored line is shown as its id rather than as invented
+## prose — the book would rather look unfinished than put words in her mouth.
+##
+## FLAVOR lines are authored for gathering, crafting and being caught, but the
+## match does not record those events yet, so none can fire. See STATUS.md.
+const TEMPLATES_PATH := "res://content/log/entries.tres"
+## Highest first. The one thing worth remembering about a night.
+const PRIORITY: PackedStringArray = ["milestone:", "npc:", "bottle:", "gate:"]
+
+static var _templates: LogTemplates = null
+
+static func _tpl() -> LogTemplates:
+	if _templates == null and ResourceLoader.exists(TEMPLATES_PATH):
+		_templates = load(TEMPLATES_PATH)
+	return _templates
+
+func _sentences_for(entry: Dictionary, index: int) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var events: Array = entry.get("lines", [])
+	var tpl := _tpl()
+	if tpl == null:
+		for event in events:
+			out.append(String(event))
+		return out
+
+	var highlight := _highlight(events, index, tpl)
+	if highlight != "":
+		out.append(highlight)
+
+	# Every third entry earns a sign-off.
+	if not tpl.closers.is_empty() and index % 3 == 2:
+		out.append(tpl.closers[(index / 3) % tpl.closers.size()])
+	return out
+
+## The single most worth-remembering thing that happened, by CONTENT.md's order.
+func _highlight(events: Array, index: int, tpl: LogTemplates) -> String:
+	for prefix in PRIORITY:
+		for event in events:
+			var id := String(event)
+			if not id.begins_with(prefix):
+				continue
+			if tpl.highlights.has(id):
+				return String(tpl.highlights[id])
+			# Bottles share one line regardless of which letter arrived; the
+			# second and later ones use the alternate so the book does not
+			# repeat itself word for word.
+			if prefix == "bottle:":
+				var key := "bottle" if index == 0 else "bottle_alt"
+				if tpl.highlights.has(key):
+					return String(tpl.highlights[key])
+			return id
+	return ""
 
 func _focus_last() -> void:
 	if _cards.is_empty():

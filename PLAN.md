@@ -223,6 +223,16 @@ AC:
       tuned values, top 3 friction notes). The author runs this; Claude prompts
       for it and blocks M9 content-tuning tasks until the file has an entry.
 
+## Pre-M11 parked work
+
+- **Log event tape** — the keeper's log has authored FLAVOR lines for gathering,
+  crafting and being caught, plus SOLO variants, but none can fire: the match
+  records only `milestone:`, `bottle:`, `npc:` and `gate:` events, and a log
+  entry carries no count of how many keeper slots were active. Needs
+  `gather:` / `craft:` / `caught:` events plus an active-slot count on the
+  entry. Authored content is already in `content/log/entries.tres` waiting for
+  it. NOT scheduled — do not build it as part of M9 or M10.
+
 ## M9 — Slice debt (the three real findings)
 
 - **The arrival** (fixes the empty first session): new worlds initialize with

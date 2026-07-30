@@ -9,4 +9,4 @@ inputs = {"driftwood": 3, "kelp": 1}
 output_id = "patch_kit"
 output_count = 1
 station = "workbench"
-unlock_flag = ""
+unlock_flag = "crab_taught_patch_kit"

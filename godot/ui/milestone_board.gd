@@ -158,9 +158,9 @@ func _show_detail(def: MilestoneDef) -> void:
 		_shortfall.text = ""
 		return
 
-	# The mock carries authored flavour for one card; the other four were never
-	# written, so none of them get invented prose here.
-	var note := "TODO_CONTENT"
+	# Board flavour is authored per milestone (CONTENT.md) and lives on the
+	# MilestoneDef, not here.
+	var note: String = def.description if def.description != "" else def.display_name
 	if def.is_lamp_relight:
 		note += "   ·   NEEDS BOTH KEEPERS"
 	_detail.text = note

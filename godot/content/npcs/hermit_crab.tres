@@ -6,5 +6,9 @@
 script = ExtResource("1_def")
 id = "hermit_crab"
 display_name = "Hermit Crab"
-stage_lines = PackedStringArray("TODO_CONTENT_crab_stage_1", "TODO_CONTENT_crab_stage_2")
-idle_line = "TODO_CONTENT_crab_idle"
+first_meeting = PackedStringArray("New keepers.", "The tower leaks. The stairs are down. The lamp is dark.", "You'll want to be stubborn. The last one was.")
+stage_asks = [PackedStringArray("You lit the fire. The smoke is crooked. It'll do.", "Bring me a smooth stone from the pools. Low tide.", "Why is my business."), PackedStringArray("The stairs hold. I heard you both on them. The tower likes the sound.", "It forgot what two sets of feet sound like.", "Bring me a fish. Small one. The pools owe me.")]
+stage_deliveries = [PackedStringArray("Hm. Round enough.", "Elio patched the hull cracks with kelp and shavings. I watched him ruin four batches before it took. You'll ruin fewer. There are two of you to argue about it."), PackedStringArray("Keep it. I don't eat them anymore. I wanted to see if you'd bring it.", "Elio made chowder when the nights got long. One bowl. He'd talk to the steam.", "The night he rowed out, I was on the rocks.", "There were two lights on the water. His, going.", "And the other one. Holding still. Like it was waiting.", "…Make the chowder. Two bowls. That's the whole recipe, really.")]
+name_exchange = PackedStringArray("A name. No.", "Names are for things the sea hasn't decided about.", "It decided about me a long time ago.")
+idle_lines = PackedStringArray("The tide is early. It's never early. It's me who's late.", "I liked the quiet. I like this better. Don't tell the quiet.", "The lamp watches you work. Towers gossip. Ask any barnacle.", "Elio counted seconds at the window. I count tides. Mine keep coming back.", "You two argue like gulls. The good kind of arguing. Keep it.")
+idle_after_lamp_lit = PackedStringArray("So. The light's back. …The water noticed. That's all I'll say.")

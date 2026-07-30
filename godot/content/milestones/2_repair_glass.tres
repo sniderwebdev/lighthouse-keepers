@@ -6,6 +6,7 @@
 script = ExtResource("1_def")
 id = "repair_glass"
 display_name = "Repair the Glass"
+description = "Salt wind through broken panes. The lamp deserves better weather."
 required_flags = PackedStringArray("stairs_fixed")
 cost = {"glass_shard": 3, "patch_kit": 1}
 on_complete_flags = PackedStringArray("glass_repaired")

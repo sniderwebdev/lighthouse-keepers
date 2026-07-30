@@ -22,6 +22,9 @@ const ARRIVE_RADIUS := 8.0
 ## Steps give up rather than hang forever. A marker you cannot reach is a real
 ## failure and should surface as one.
 const WALK_TIMEOUT := 16.0
+## A panel that never closes is a real failure; give up and let the verifier's
+## own assertion be the one that reports it.
+const READ_TIMEOUT := 12.0
 ## Long enough for is_action_just_pressed, short enough not to read as a hold.
 const TAP_TIME := 0.25
 ## Stations want a hold rather than a tap.
@@ -38,6 +41,13 @@ const MASH := "mash"        # [MASH, seconds?]                press/release ever
 const UI := "ui"            # [UI, "ui_down"]                 send a UI action as an event
 const WAIT := "wait"        # [WAIT, seconds]                 the only timed step there is
 const HOLD_DIR := "hold_dir"  # [HOLD_DIR, a_dir, b_dir, seconds]
+## [READ] — tap until the open panel closes itself.
+##
+## Letters and dialogue are as long as the author wrote them. A fixed number of
+## taps, or a timed wait, would encode the length of the prose into the test:
+## write one more paragraph and an unrelated assertion starts failing. Same
+## reasoning as the no-timed-legs law, applied to text.
+const READ := "read"
 
 const ROUTES: Dictionary = {
 	# The camera tour. Distances here ARE the subject — this route measures
@@ -63,9 +73,23 @@ const ROUTES: Dictionary = {
 	"wheel_pose": [[GO, "workbench"], [AIM, "right", 12.0]],
 	"wheel_pose_short": [[GO, "workbench"], [AIM, "up", 12.0]],
 	"wheel_stove": [[GO, "stove"], [AIM, "up", 10.0]],
-	"read_bottle": [[GO, "bottle_01"], [TAP], [WAIT, 0.8], [TAP], [WAIT, 4.0]],
+	"read_bottle": [[GO, "bottle_01"], [TAP], [WAIT, 0.8], [READ], [WAIT, 4.0]],
 	"read_bottle_pose": [[GO, "bottle_01"], [TAP], [WAIT, 12.0]],
-	"talk_crab": [[GO, "hermit_crab"], [TAP], [WAIT, 4.0]],
+	"talk_crab": [[GO, "hermit_crab"], [TAP], [WAIT, 1.2], [READ], [WAIT, 3.0]],
+	# Fetch what he asks for, then hand it over. Each TALK advances one stage, so
+	# the ask and the delivery are two conversations, not one.
+	"crab_stone": [
+		[GO, "smooth_stone_01"], [TAP], [WAIT, 1.5],
+		[GO, "hermit_crab"],
+		[TAP], [WAIT, 1.2], [READ], [WAIT, 1.5],
+		[TAP], [WAIT, 1.2], [READ], [WAIT, 2.5],
+	],
+	"crab_fish": [
+		[GO, "fish_stub_01"], [TAP], [WAIT, 1.5],
+		[GO, "hermit_crab"],
+		[TAP], [WAIT, 1.2], [READ], [WAIT, 1.5],
+		[TAP], [WAIT, 1.2], [READ], [WAIT, 2.5],
+	],
 	"seal_step": [[GO, "milestone_board"], [TAP], [WAIT, 0.7], [TAP], [WAIT, 3.0]],
 	"seal_locked": [
 		[GO, "milestone_board"], [TAP], [WAIT, 0.7],
@@ -88,9 +112,13 @@ var _index := 0
 var _elapsed := 0.0
 var _step_time := 0.0
 var _finished := false
+## Whether a panel (reader, dialogue, board) currently owns the screen. READ
+## steps page until this goes false.
+var _modal_open := false
 
 func _ready() -> void:
 	_steps = ROUTES.get(route, ROUTES["tour"])
+	EventBus.ui_modal_changed.connect(func(open: bool) -> void: _modal_open = open)
 
 func _process(delta: float) -> void:
 	if _finished:
@@ -149,6 +177,14 @@ func _run_step(step: Array, delta: float) -> bool:
 				_send_action(String(step[1]), true)
 				_send_action(String(step[1]), false)
 			return _step_time >= 0.25
+		READ:
+			if not _modal_open or _step_time >= READ_TIMEOUT:
+				_press("", false)
+				return true
+			# Tap on a cadence: press, release, press. A held button is not a
+			# page turn.
+			_press("", fmod(_step_time, TAP_TIME * 2.0) < TAP_TIME)
+			return false
 		WAIT:
 			return _step_time >= float(step[1])
 		HOLD_DIR:

@@ -6,6 +6,7 @@
 script = ExtResource("1_def")
 id = "relight_lamp"
 display_name = "Relight the Lamp"
+description = "Oil. Wick. Two hands on the crank. It was always meant to be two."
 required_flags = PackedStringArray("lens_restored")
 cost = {"lamp_oil": 2}
 on_complete_flags = PackedStringArray("lamp_ready")

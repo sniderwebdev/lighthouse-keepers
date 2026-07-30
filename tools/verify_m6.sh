@@ -41,6 +41,16 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
   -H "Content-Type: application/json" -d '{"id":"lk-m6-verifier-0001"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
 
+# Put a world into a story state without replaying the systems that produce it.
+# The subject here is the CRAB; the stairs are somebody else's acceptance
+# criteria, and rebuilding them inside this test would only add ways to fail
+# for reasons that have nothing to do with the crab.
+setflag() { # setflag <world> <flag>
+  curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"$2\\\"}\"" >/dev/null
+}
+
 set_tide() { # set_tide <world> <t> [cycle]
   local body="{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":$2"
   [ $# -ge 3 ] && body="$body,\\\"cycle\\\":$3"
@@ -109,22 +119,54 @@ LOCKED=$(grep -oE "\[radial\] opened at stove .* with \[[^]]*\]" "$OUT/m6_locked
 echo "$LOCKED" | grep -q "chowder:locked"
 check "before the crab teaches it, the wheel shows it locked" $? "${LOCKED:-the stove wheel never opened}"
 
-# Stage two needs the hearth lit, then a second conversation.
+# The crab now runs two ask/deliver errands (CONTENT.md), so the sequence is:
+# hearth -> he asks for a stone -> you bring it and he teaches patch_kit ->
+# patch_kit funds fix_stairs -> he asks for a fish -> chowder.
 launch m6_crab2 --slot=keeper_a --world=CRB$TAG --scene=tower \
   --debug-gather=driftwood_01,driftwood_02 --debug-advance=clear_hearth >/dev/null
 sleep 10
 kill_all
-launch m6_crab3 --slot=keeper_a --world=CRB$TAG --autowalk=talk_crab >/dev/null
-sleep 13
+
+# Errand one: fetch the stone, then hand it over. Two conversations — a TALK
+# advances one stage, and the ask and the delivery are separate beats.
+launch m6_crab_stone --slot=keeper_a --world=CRB$TAG --autowalk=crab_stone >/dev/null
+sleep 34
+kill_all
+
+ASKED=$(docker compose -f "$REPO/docker-compose.yml" logs --since 4m nakama 2>/dev/null \
+  | grep -oE "hermit_crab reached stage 2 \(crab_asked_stone\) in CRB$TAG" | tail -1)
+[ -n "$ASKED" ]
+check "with the hearth lit, the crab asks for a stone" $? "${ASKED:-never asked}"
+
+TAUGHT=$(docker compose -f "$REPO/docker-compose.yml" logs --since 4m nakama 2>/dev/null \
+  | grep -oE "hermit_crab reached stage 3 \(crab_taught_patch_kit\) in CRB$TAG" | tail -1)
+[ -n "$TAUGHT" ]
+check "handing over the stone earns the patch_kit recipe" $? "${TAUGHT:-never taught}"
+
+SPENT=$(grep -oE "inv=\{[^}]*\}" "$OUT/m6_crab_stone.log" | tail -1 | grep -oE "smooth_stone\":[0-9.]+")
+echo "$SPENT" | grep -qE "smooth_stone\":0" || [ -z "$SPENT" ]
+check "the stone was actually handed over, not just shown" $? "${SPENT:-no smooth_stone left in the basket}"
+
+# Errand two needs the stairs. That the stairs REQUIRE the patch_kit he just
+# taught is M5's ordering criterion and is checked there; here we just need a
+# world where they are up.
+launch m6_crab4 --slot=keeper_a --world=CRB$TAG >/dev/null
+sleep 6
+setflag CRB$TAG stairs_fixed
+sleep 3
+kill_all
+
+launch m6_crab_fish --slot=keeper_a --world=CRB$TAG --autowalk=crab_fish >/dev/null
+sleep 34
 kill_all
 launch m6_ready --slot=keeper_a --world=CRB$TAG --autowalk=wheel_stove >/dev/null
 sleep 15
 kill_all
 
-STAGE2=$(docker compose -f "$REPO/docker-compose.yml" logs --since 3m nakama 2>/dev/null \
-  | grep -oE "hermit_crab reached stage 2 \(crab_taught_chowder\) in CRB$TAG" | tail -1)
-[ -n "$STAGE2" ]
-check "the crab reached stage two once the hearth was lit" $? "${STAGE2:-never advanced}"
+STAGE5=$(docker compose -f "$REPO/docker-compose.yml" logs --since 5m nakama 2>/dev/null \
+  | grep -oE "hermit_crab reached stage 5 \(crab_taught_chowder\) in CRB$TAG" | tail -1)
+[ -n "$STAGE5" ]
+check "the fish errand ends in the chowder recipe" $? "${STAGE5:-never reached stage five}"
 
 READY=$(grep -oE "\[radial\] opened at stove .* with \[[^]]*\]" "$OUT/m6_ready.log" | tail -1)
 echo "$READY" | grep -q "chowder:ready"

@@ -11,6 +11,7 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 OUT="${OUT:-$REPO/.m4-evidence}"
+HOST="http://127.0.0.1:7350"
 
 mkdir -p "$OUT"
 rm -f "$OUT"/*.log
@@ -42,12 +43,28 @@ kill_all
 # oil is present-but-unaffordable in the same wheel.
 SEED="--debug-gather=driftwood_01,driftwood_02,driftwood_03,kelp_01,kelp_02"
 
+TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
+  -H "Authorization: Basic $(printf 'defaultkey:' | base64)" \
+  -H "Content-Type: application/json" -d '{"id":"lk-m4-verifier-0001"}' \
+  | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
+
+# patch_kit is TAUGHT by the crab now (CONTENT.md), not known from the start.
+# M4 is about the crafting wheel, and the wheel does not care which recipe
+# taught it — so put the world into the taught state rather than playing the
+# crab's errand inside a crafting test.
+teach() { # teach <world>
+  curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\"" >/dev/null
+}
+
 echo "=============================================================="
 echo "AC1 — craft succeeds only when affordable; inputs decrement and"
 echo "      output increments on BOTH clients atomically"
 echo "=============================================================="
 launch m4_craft_a --slot=keeper_a --world=CFA$TAG $SEED --autowalk=craft_at_bench >/dev/null
 launch m4_craft_b --slot=keeper_b --world=CFA$TAG >/dev/null
+sleep 4; teach CFA$TAG
 sleep 20
 kill_all
 
@@ -84,6 +101,9 @@ echo "      it does nothing server-side"
 echo "=============================================================="
 launch m4_short --slot=keeper_a --world=CFB$TAG --debug-gather=driftwood_01,kelp_01 \
   --autowalk=craft_unaffordable >/dev/null
+# Taught but unaffordable is the state under test here — a LOCKED recipe would
+# be disabled for the wrong reason and the check would pass without meaning it.
+sleep 4; teach CFB$TAG
 sleep 20
 kill_all
 
@@ -101,7 +121,11 @@ check "the world granted nothing" $? "$GOT lamp_oil announcements"
 
 # And the same command sent straight past the wheel is still refused, because
 # the client's greying-out is a prediction and the server is the actual answer.
-SRV_BEFORE=$(docker compose -f "$REPO/docker-compose.yml" logs --since 3m nakama 2>/dev/null | grep -c "crafted lamp_oil" || true)
+# Scoped to THIS world. Unscoped, any lamp_oil crafted anywhere in the last
+# three minutes — M7's chain, a previous run still inside the window — fails a
+# check that has nothing to do with it.
+SRV_BEFORE=$(docker compose -f "$REPO/docker-compose.yml" logs --since 3m nakama 2>/dev/null \
+  | grep -c "crafted lamp_oil at the workbench in CFB$TAG" || true)
 [ "$SRV_BEFORE" = "0" ]
 check "the server never crafted it either" $? "$SRV_BEFORE server-side lamp_oil crafts"
 
@@ -110,11 +134,13 @@ echo "=============================================================="
 echo "AC3 — the radial is operable by stick AND by d-pad"
 echo "=============================================================="
 launch m4_stick --slot=keeper_a --world=CFC$TAG $SEED --autowalk=craft_at_bench >/dev/null
+sleep 4; teach CFC$TAG
 sleep 20
 kill_all
 STICK=$(grep -oE "\[radial\] crafting patch_kit at workbench" "$OUT/m4_stick.log" | tail -1)
 
 launch m4_dpad --slot=keeper_a --world=CFD$TAG $SEED --autowalk=craft_dpad >/dev/null
+sleep 4; teach CFD$TAG
 sleep 20
 kill_all
 DPAD=$(grep -oE "\[radial\] crafting patch_kit at workbench" "$OUT/m4_dpad.log" | tail -1)
@@ -133,7 +159,7 @@ OPENED=$(grep -oE "\[radial\] opened at [a-z_]+ for keeper_[ab]" "$OUT/m4_stick.
 [ -n "$OPENED" ]
 check "holding interact at a bench opens its wheel" $? "$OPENED"
 
-# chowder is stove-only and locked behind a TODO_CONTENT flag, so it must not
+# chowder is stove-only and locked behind crab_taught_chowder, so it must not
 # appear on the bench wheel at all.
 CHOWDER=$(grep -cE "\[radial\] crafting chowder" "$OUT/m4_stick.log" || true)
 [ "$CHOWDER" = "0" ]

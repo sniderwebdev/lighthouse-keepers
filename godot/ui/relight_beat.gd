@@ -9,6 +9,7 @@ class_name RelightBeat
 ## Warm floods everything here, which is the one place in the game that is
 ## allowed: this IS the light source (DESIGN §6).
 
+const CLOSING_TEXT := "The lamp takes.\n\nThe beam goes out over the water — past the pools, past the shoal, past the old wreck — and for the first time in nine years, this coast answers the dark.\n\nSomewhere out there, a man who was answered once is watching the horizon. Tonight it answers again.\n\nA light kept by one is a vigil.\nA light kept by two is a home.\n\nThe tide will be back in the morning.\nSo will you."
 const FLOOD_IN := 1.0
 const HOLD := 1.6
 const SWEEPS := 2
@@ -52,8 +53,11 @@ func _play() -> void:
 			.set_trans(Tween.TRANS_SINE)
 	beat.tween_property(_beam, "modulate:a", 0.0, 0.5)
 
-	# The closing words are the author's — this one is written to her.
-	beat.tween_callback(func() -> void: _closing.text = "TODO_CONTENT_closing")
+	# The closing words, from CONTENT.md. The FINAL CARD after this is
+	# [PERSONAL] — the author's line to her — and it has no default, so when it
+	# is unwritten the beat simply ends on the in-fiction text. Nothing invented
+	# stands in for it (CLAUDE.md).
+	beat.tween_callback(func() -> void: _closing.text = CLOSING_TEXT)
 	beat.tween_property(_closing, "modulate:a", 1.0, 0.8)
 	beat.tween_interval(HOLD)
 	beat.tween_property(_closing, "modulate:a", 0.0, 0.8)

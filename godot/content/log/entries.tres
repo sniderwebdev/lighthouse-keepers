@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="LogTemplates" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/log_templates.gd" id="1_def"]
+
+[resource]
+script = ExtResource("1_def")
+highlights = {
+"milestone:clear_hearth": "We cleared the hearth and coaxed a fire from it. The tower is warm for the first time in years.",
+"milestone:fix_stairs": "The stairs hold again. We tested every step twice, then raced up them once.",
+"milestone:repair_glass": "New glass in the lamp room. The dusk comes through it clean.",
+"milestone:restore_lens": "The lens turns. All that brass, waiting all this time to shine.",
+"milestone:relight_lamp": "Tonight we lit the lamp — both hands on the crank, the way it wants. The beam went out over the water, and we watched it go, and neither of us said anything for a while.",
+"bottle": "A bottle came in on the tide. Elio's hand again. We read it twice.",
+"bottle_alt": "The sea brought another letter. We are starting to know the man who wrote them.",
+"npc:hermit_crab:1": "The crab asked us for something today. We suspect it was a test.",
+"npc:hermit_crab:2": "The crab talked about Elio tonight. Two lights on the water, he said. He wouldn't say more.",
+"caught": "The tide caught {keeper} on the sandbar. Wet boots, wounded pride, nothing worse.",
+"caught_SOLO": "The tide caught me out. I know better. It knows I know better."
+}
+flavor = {
+"gather": "Gathered {items} off the low tide.",
+"gather_alt": "The pools were generous today: {items}.",
+"first_chowder": "Chowder night. One bowl each — the crab insists that's the whole recipe.",
+"kelp_tea": "Two cups of kelp tea before the tide turned. Elio was right about the second cup.",
+"first_patch_kit": "Patched what needed patching. Elio ruined four batches learning this. We ruined {count}.",
+"craft_generic": "Made {item}. The workbench is starting to feel like ours."
+}
+closers = PackedStringArray("The tower creaked all evening. Approvingly, we think.", "The crab watched from the rocks. He denies it.", "Sea calm. Lamp waiting. Us too.", "A good day's keeping.")
+closer_solo = "Kept the light alone tonight. It missed the other set of feet. So did I."

@@ -6,7 +6,8 @@
 script = ExtResource("1_def")
 id = "bottle_01"
 chapter = 1
-text_key = "TODO_CONTENT_bottle_01"
+text_key = "letter_bottle_01"
+body = "To whoever keeps the light next — if there's anyone. If this is just the sea reading my mail again, fine. Wouldn't be the first time.\n\nBut if you're real — if you're standing in my tower right now — then listen, because I don't know how many of these will make it to you.\n\nThe stove sulks. Feed it small and talk to it, I mean it, it listens. The tide lies at mid-water — looks patient, isn't. There's a crab down by the pools who acts like he owns the place. He does. Let him.\n\nKelp tea before bed. Two cups. Always two, even when I only needed the one.\n\nThere's more I should say — why I'm not there saying it — but my hands are shaking and the tide won't wait for a longer letter.\n\nLight the lamp. Please. Whatever else you fix, fix that.\n\n— Elio"
 sets_flag = "read_bottle_01"
 requires_flag = ""
 spawn_weight = 1.0

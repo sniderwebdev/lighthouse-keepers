@@ -40,6 +40,15 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
   -H "Content-Type: application/json" -d '{"id":"lk-m7-verifier-0001"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
 
+# patch_kit is TAUGHT by the crab now (CONTENT.md). M7's subject is the LAMP —
+# the chain, the tandem gate, the beat — and the crab's errands are M6's
+# criteria. Put the world into the taught state rather than replaying them here.
+teach() { # teach <world>
+  curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\"" >/dev/null
+}
+
 set_cycle() { # set_cycle <world> <cycle>
   curl -s -X POST "$HOST/v2/rpc/debug_set_tide" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
@@ -58,6 +67,10 @@ echo "=============================================================="
 PLAY=ACT$TAG
 launch m7_play --slot=keeper_a --world=$PLAY --debug-harvest >/dev/null
 sleep 6
+# Teach it here, while this world is definitely live: --debug-craft fires at
+# world entry, so the next run has already tried to craft before any RPC we
+# could send it would land.
+teach $PLAY
 # Six tides' worth of shore. Brass and glass come back every other cycle, so the
 # lens is what sets the pace.
 for C in 1 2 3 4 5 6 7; do set_cycle $PLAY $C; sleep 2.5; done
@@ -145,6 +158,7 @@ echo "AC1c — the same gate on the couch: one pad is still not enough"
 echo "=============================================================="
 COUCH=CCH$TAG
 launch m7_couch_seed --couch-both --world=$COUCH --debug-harvest >/dev/null
+sleep 6; teach $COUCH
 sleep 5
 for C in 1 2 3 4 5 6 7; do set_cycle $COUCH $C; sleep 2.5; done
 sleep 2
@@ -189,8 +203,16 @@ STORY=$(grep -oE "\[relight\] beat complete" "$OUT/m7_gate_a.log" | tail -1)
 [ -n "$STORY" ]
 check "the relight beat ran to its end" $? "${STORY:-it never finished}"
 
-grep -q "TODO_CONTENT_closing" "$REPO/godot/ui/relight_beat.gd"
-check "the closing words are left for the author" $? "relight_beat.gd holds a TODO_CONTENT stub"
+# The closing words are now authored (CONTENT.md). What still belongs to the
+# author is the FINAL CARD after them — a [PERSONAL] slot with no default — so
+# the check inverts: the in-fiction text must be there, and nothing may be
+# standing in for the card she has not written.
+grep -q "A light kept by two is a home" "$REPO/godot/ui/relight_beat.gd"
+check "the closing words are in place" $? "relight_beat.gd carries the authored beat"
+
+! grep -qE "TODO_CONTENT|PERSONAL_placeholder" "$REPO/godot/ui/relight_beat.gd"
+check "nothing invented stands in for the personal final card" $? \
+  "no stub or substitute text in relight_beat.gd"
 
 echo
 echo "=============================================================="

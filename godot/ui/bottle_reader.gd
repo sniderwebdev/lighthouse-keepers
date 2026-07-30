@@ -103,13 +103,36 @@ func _refresh() -> void:
 			else "page %d of %d" % [_page + 1, _pages.size()],
 	]
 
-## The letters are the author's. Until they are written, the reader shows the
-## content key it is waiting for rather than prose nobody chose.
+## Paragraphs are the author's; page breaks are not. Whole paragraphs are packed
+## into a page until the next one would not fit, so a page never splits a
+## sentence and the letter reads the way it was written.
+##
+## PAGE_BUDGET is characters, tuned to the reader panel at 640x360. It is a
+## layout constant, not a feel value — no playtest gate applies.
+const PAGE_BUDGET := 340
+
 func _pages_for(bottle_id: String) -> PackedStringArray:
 	var def := StoryRegistry.bottle(bottle_id)
-	if def == null or def.text_key == "":
+	if def == null or def.body.strip_edges() == "":
+		# A letter the author has not written yet says so, rather than showing
+		# prose nobody chose.
 		return PackedStringArray(["TODO_CONTENT"])
-	return PackedStringArray([def.text_key])
+	var pages: PackedStringArray = []
+	var current := ""
+	for para in def.body.split("\n\n", false):
+		var block := String(para).strip_edges()
+		if block == "":
+			continue
+		if current == "":
+			current = block
+		elif current.length() + block.length() + 2 <= PAGE_BUDGET:
+			current += "\n\n" + block
+		else:
+			pages.append(current)
+			current = block
+	if current != "":
+		pages.append(current)
+	return pages
 
 func _roman(n: int) -> String:
 	const NUMERALS: PackedStringArray = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII"]
