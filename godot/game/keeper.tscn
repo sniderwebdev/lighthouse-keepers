@@ -1,7 +1,7 @@
 [gd_scene load_steps=7 format=3 uid="uid://blighthousekeeperactor"]
 
 [ext_resource type="Script" path="res://game/keeper.gd" id="1_keeper"]
-[ext_resource type="Texture2D" path="res://art/placeholder/keeper_a.png" id="2_sheet"]
+[ext_resource type="Texture2D" path="res://assets/art/keepers/keeper_a.png" id="2_sheet"]
 [ext_resource type="Script" path="res://game/interactor.gd" id="3_interactor"]
 [ext_resource type="Script" path="res://game/keeper_halo.gd" id="4_halo"]
 
@@ -27,7 +27,8 @@ unique_name_in_owner = true
 texture_filter = 1
 position = Vector2(0, -12)
 texture = ExtResource("2_sheet")
-hframes = 3
+hframes = 8
+vframes = 3
 
 [node name="Collision" type="CollisionShape2D" parent="."]
 position = Vector2(0, -3)

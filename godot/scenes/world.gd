@@ -19,8 +19,8 @@ class_name PlayableWorld
 ## it depends on having received a pose, which only the keeper knows about.
 
 const KEEPER_SCENE := preload("res://game/keeper.tscn")
-const SHEET_A: Texture2D = preload("res://art/placeholder/keeper_a.png")
-const SHEET_B: Texture2D = preload("res://art/placeholder/keeper_b.png")
+const SHEET_A: Texture2D = preload("res://assets/art/keepers/keeper_a.png")
+const SHEET_B: Texture2D = preload("res://assets/art/keepers/keeper_b.png")
 
 ## Walkable extent, matching this scene's wall colliders.
 @export var room := Rect2(0, 0, 1280, 720)

@@ -41,10 +41,27 @@ const INTERP_DELAY := 0.15
 const RESYNC_RATE := 2.0
 const POSE_BUFFER_MAX := 16
 
-## Sprite frames in the placeholder sheets.
-const FRAME_DOWN := 0
-const FRAME_SIDE := 1
-const FRAME_UP := 2
+## Sheet rows — which way they are facing. See tools/gen_keeper_sheets.gd for
+## the grid; a replacement sheet only has to match it.
+const ROW_DOWN := 0
+const ROW_SIDE := 1
+const ROW_UP := 2
+const SHEET_COLS := 8
+
+## Columns — what they are doing.
+const COL_IDLE := 0
+const WALK_COLS: PackedInt32Array = [1, 2, 3, 4]
+const COL_GATHER := 5
+
+## How fast the four-step cycle runs. Not a feel value in the tuned sense — it is
+## a property of the drawing, and it is derived from the walk speed below rather
+## than set, so a keeper never moon-walks no matter what a playtest does to
+## Tuning.walk_speed.
+const WALK_STRIDE_PX := 11.0
+
+## How long the crouch holds after a gather, in seconds. Long enough to read as
+## picking something up, short enough not to fight the next step.
+const GATHER_HOLD := 0.32
 
 @export var slot: String = Command.SLOT_A
 ## Action prefix for this keeper's pad: "" is device 0, "p2_" is device 1.
@@ -88,6 +105,10 @@ var _buffer: Array[Dictionary] = []
 var _play_head := 0.0
 var _has_pose := false
 var _elsewhere := false
+## Distance this keeper has covered, in pixels. Drives the walk cycle.
+var _walked := 0.0
+## Seconds of gather crouch left to play.
+var _gather_hold := 0.0
 
 func _ready() -> void:
 	if sheet != null:
@@ -100,6 +121,8 @@ func _ready() -> void:
 	_interactor.target_changed.connect(_on_target_changed)
 	EventBus.ui_modal_changed.connect(_on_ui_modal_changed)
 	EventBus.ambient_changed.connect(_on_ambient_changed)
+	EventBus.sfx_requested.connect(_on_sfx_requested)
+	EventBus.node_changed.connect(_on_node_taken)
 	_apply_facing()
 	_update_visibility()
 
@@ -108,6 +131,12 @@ func _physics_process(delta: float) -> void:
 		_drive(delta)
 	else:
 		_replay(delta)
+	# Both paths set `velocity`, so the cycle is fed the same way whether this
+	# keeper is being driven or mirrored.
+	_walked += velocity.length() * delta
+	if _gather_hold > 0.0:
+		_gather_hold = maxf(0.0, _gather_hold - delta)
+	_apply_facing()
 
 ## Couch drop-in: this keeper was a mirror waiting for a partner who has now sat
 ## down at THIS machine. Stop replaying poses, start reading a pad.
@@ -328,6 +357,17 @@ func _place_prompt() -> void:
 	_prompt_label.text = target.prompt_text()
 	_prompt.global_position = target.prompt_position().round()
 
+## A node went away, which means somebody bent down for it. Both keepers play
+## it: on a couch you are watching the other one work, and a partner who picks
+## things up without moving reads as a bug.
+func _on_node_taken(_node_id: String, ready_now: bool) -> void:
+	if not ready_now:
+		_gather_hold = GATHER_HOLD
+
+func _on_sfx_requested(id: String) -> void:
+	if id == "craft":
+		_gather_hold = GATHER_HOLD
+
 # --- caught by the water ---
 
 ## The server has confirmed this keeper was caught. BOTH clients play the fade,
@@ -390,14 +430,29 @@ func _facing_from(dir: Vector2) -> int:
 	return int(round(angle / (TAU / 8.0))) & 7
 
 func _apply_facing() -> void:
+	var row := ROW_SIDE
 	match facing:
 		2:
-			_sprite.frame = FRAME_UP
+			row = ROW_UP
 			_sprite.flip_h = false
 		6:
-			_sprite.frame = FRAME_DOWN
+			row = ROW_DOWN
 			_sprite.flip_h = false
 		_:
 			# Everything else is a profile; the sheet draws it facing right.
-			_sprite.frame = FRAME_SIDE
+			row = ROW_SIDE
 			_sprite.flip_h = facing in [3, 4, 5]
+	_sprite.frame = row * SHEET_COLS + _anim_column()
+
+## Which column of the sheet this keeper is on. Gathering wins over walking, and
+## walking is driven by DISTANCE COVERED rather than by a timer — a keeper slowed
+## by wet boots takes the same strides, just fewer of them per second, and a
+## playtest that changes walk_speed cannot desynchronise the feet from the ground.
+func _anim_column() -> int:
+	if _gather_hold > 0.0:
+		# Two drawn frames, so the crouch has a beginning and a bottom.
+		return COL_GATHER + (0 if _gather_hold > GATHER_HOLD * 0.5 else 1)
+	if velocity.length() < 1.0:
+		return COL_IDLE
+	var step := int(_walked / WALK_STRIDE_PX) % WALK_COLS.size()
+	return WALK_COLS[step]
