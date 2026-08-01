@@ -26,6 +26,11 @@ const OP = {
   TALK: 10,        // { npc_id, slot } — advance an NPC's stage if its conditions hold
   CLAIM: 11,       // { slot } — a second player on this connection joins mid-session
 
+  // 12 is RESERVED for Act 2's ENTER_ZONE (PLAN.md "Act 2 pre-decisions"). That
+  // plan originally called it opcode 9, which 9/10/11 had already been spent on
+  // by the time the slice shipped. Reserved rather than declared: it is not a
+  // command until the boat exists. Next free opcode is 13.
+
   // Not commands. Where a keeper APPEARS to be is presentation, not authoritative
   // shared state (PLAN.md M1): never validated against the world, never persisted,
   // never merged into WorldState. Relayed only.

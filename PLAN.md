@@ -291,7 +291,9 @@ author has run the full five-session arc in couch mode.
 ## Act 2 pre-decisions (locked now, implemented later)
 
 - **Zone authority**: Act 2 introduces coarse position truth — an `ENTER_ZONE`
-  command (opcode 9) marking which named zone each SLOT occupies. Enough to
+  command (**opcode 12**) marking which named zone each SLOT occupies. This was
+  planned as opcode 9, but the slice spent 9/10/11 on `CAUGHT`/`TALK`/`CLAIM`;
+  12 is reserved for it in both `command.gd` and `match_handler.ts`. Enough to
   validate "who is rowing" and boat tandem gates; full position authority stays
   out. Do not implement before the boat exists.
 - Audio direction above is Act-1-scoped; boat/storm audio re-planned with Act 2.

@@ -20,6 +20,11 @@ enum Op {
 	CAUGHT       = 9,   # { "slot": String, "zone": String } -> wade home, slow a while
 	TALK         = 10,  # { "npc_id": String, "slot": String } -> advance a neighbour
 	CLAIM        = 11,  # { "slot": String } -> a second player joins mid-session
+	# 12 is RESERVED for Act 2's ENTER_ZONE (PLAN.md "Act 2 pre-decisions"). That
+	# plan originally called it opcode 9, which 9/10/11 had already been spent on
+	# by the time the slice shipped. Reserved rather than declared: it is not a
+	# command until the boat exists, and an opcode the server does not handle is
+	# worse than no opcode at all. Next free opcode is 13.
 }
 
 ## Non-command opcodes. These are not intents and the server does not validate,
