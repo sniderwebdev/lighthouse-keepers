@@ -38,9 +38,36 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
   -H "Content-Type: application/json" -d '{"id":"lk-m2-verifier-0001"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
 
-set_tide() { # set_tide <world> <t>
+# --- dev RPCs: ask until the world answers -----------------------------------
+#
+# A world is only reachable once its match is LIVE, and how long a client takes
+# to get there is a property of the machine, not of anything under test. Every
+# verifier that guessed a sleep here has eventually been wrong: verify_m8.sh
+# taught a world that did not exist yet and blamed the milestone chain four
+# steps later, and verify_m4.sh raced its own autowalk route. Both were
+# invisible because the answer went to /dev/null.
+rpc_log() { cat >>"$OUT/rpc.log"; echo >>"$OUT/rpc.log"; }
+retry_rpc() { # retry_rpc <command...>
+  local i out
+  for i in $(seq 1 20); do
+    out=$("$@")
+    printf '%s\n' "$out" | rpc_log
+    case "$out" in
+      *"no live match"*) sleep 1.0 ;;
+      *) return 0 ;;
+    esac
+  done
+  echo "rpc never took: $*" >&2
+  return 1
+}
+
+
+set_tide_once() { # set_tide <world> <t>
   curl -s -X POST "$HOST/v2/rpc/debug_set_tide" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":$2}\""
+}
+set_tide() { # set_tide <world> <t>
+  retry_rpc set_tide_once "$@"
 }
 world_tide_t() { # read persisted t straight from the server's storage view
   curl -s -X POST "$HOST/v2/rpc/join_world" -H "Authorization: Bearer $TOKEN" \
@@ -155,9 +182,16 @@ echo "=============================================================="
 # A walks out onto the sandbar; B just watches and records.
 launch m2_catch_a --slot=keeper_a --world=CATCH1 --autowalk=to_sandbar --debug-gather=driftwood_04,kelp_02,glass_shard_02 >/dev/null
 launch m2_catch_b --slot=keeper_b --world=CATCH1 "--trace=$OUT/catch_b.csv" >/dev/null
-sleep 8
 set_tide CATCH1 0.02 >/dev/null   # LOW: the sandbar is walkable
-sleep 12                          # let A finish walking out there
+# "sleep 12 # let A finish walking out there" was a timed movement leg, which
+# the Testing law forbids for exactly this reason: when the client got slower to
+# boot, the tide flipped before A was standing on the sandbar and the catch
+# never happened. Wait for the route to say it arrived.
+for _ in $(seq 1 40); do
+  grep -q "\[autowalk\] step 0 go done" "$OUT/m2_catch_a.log" 2>/dev/null && break
+  sleep 1
+done
+sleep 2                           # let the arrival settle into a pose
 INV_BEFORE=$(grep -o 'inv={[^}]*}' "$OUT/m2_catch_a.log" | tail -1)
 set_tide CATCH1 0.26 >/dev/null   # MID: the sandbar goes under
 sleep 10

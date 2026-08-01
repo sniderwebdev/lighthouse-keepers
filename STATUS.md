@@ -178,10 +178,29 @@ touched. The new volume panel is not one of the five gated screens.
    Either the verb is unimplemented or the opcode is vestigial — worth a decision
    before M11.
 7. **The first full suite run of this session failed broadly** (M2, M3, M5, M6,
-   M7) with empty evidence strings. Re-running each alone passed. That was
-   machine contention, not regression — but it is worth knowing that this suite
-   is not currently safe to trust on a loaded machine, and that only M4's
-   failure survived isolation.
+   M7) with empty evidence strings. Re-running each alone passed — machine
+   contention, not regression. Only M4's failure survived isolation.
+
+   **Audited and fixed 2026-08-01.** All five carried the same class of defect:
+
+   - `verify_m7.sh` — `sleep 6; teach`, response to `/dev/null`. Structurally
+     identical to the M8 bug. If it lost, `patch_kit` stayed locked and the Act
+     One playthrough failed several steps downstream.
+   - `verify_m2.sh` — **a timed movement leg**, `sleep 12 # let A finish walking
+     out there`, which the Testing law forbids by name. When boot slowed, the
+     tide flipped before A stood on the sandbar and the catch never happened.
+     Now waits for the route to report arrival.
+   - `verify_m5.sh` — `sleep 14` for a whole Nakama restart. Now polls
+     `/healthcheck`. This is why AC1 read "on rejoin the tower drew: nothing":
+     true, and silent about persistence, the thing under test.
+   - `verify_m3.sh` — `sleep 3` before `set_tide`, the tightest liveness margin
+     in the suite against a ~2s join.
+   - `verify_m6.sh` — correct ordering already, but silent responses.
+
+   Every dev RPC in the suite now retries until the world answers and logs every
+   response to `rpc.log`. Re-run after the fix: M2 16/16, M3 15/15, M5 13/13,
+   M6 24/24, M7 18/18 `[VERIFIED 2026-08-01]`. M2's retry fired twice on that
+   run, so the race was live there and not hypothetical.
 
 ### Open / unresolved
 

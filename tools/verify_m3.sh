@@ -44,12 +44,39 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
   -H "Content-Type: application/json" -d '{"id":"lk-m3-verifier-0001"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
 
-set_tide() { # set_tide <world> <t> [cycle]
+# --- dev RPCs: ask until the world answers -----------------------------------
+#
+# A world is only reachable once its match is LIVE, and how long a client takes
+# to get there is a property of the machine, not of anything under test. Every
+# verifier that guessed a sleep here has eventually been wrong: verify_m8.sh
+# taught a world that did not exist yet and blamed the milestone chain four
+# steps later, and verify_m4.sh raced its own autowalk route. Both were
+# invisible because the answer went to /dev/null.
+rpc_log() { cat >>"$OUT/rpc.log"; echo >>"$OUT/rpc.log"; }
+retry_rpc() { # retry_rpc <command...>
+  local i out
+  for i in $(seq 1 20); do
+    out=$("$@")
+    printf '%s\n' "$out" | rpc_log
+    case "$out" in
+      *"no live match"*) sleep 1.0 ;;
+      *) return 0 ;;
+    esac
+  done
+  echo "rpc never took: $*" >&2
+  return 1
+}
+
+
+set_tide_once() { # set_tide <world> <t> [cycle]
   local body="{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":$2"
   [ $# -ge 3 ] && body="$body,\\\"cycle\\\":$3"
   body="$body}"
   curl -s -X POST "$HOST/v2/rpc/debug_set_tide" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" -d "\"$body\""
+}
+set_tide() { # set_tide <world> <t> [cycle]
+  retry_rpc set_tide_once "$@"
 }
 
 echo "=============================================================="

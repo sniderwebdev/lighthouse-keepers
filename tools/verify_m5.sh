@@ -12,6 +12,8 @@ set -uo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
 OUT="${OUT:-$REPO/.m5-evidence}"
+# Only used to poll the server back up after the restart check.
+HOST="http://127.0.0.1:7350"
 
 mkdir -p "$OUT"
 rm -f "$OUT"/*.log
@@ -75,7 +77,16 @@ check "both saw it within 500ms of each other" $? "${SKEW}s apart"
 
 echo "        (restarting the whole server...)"
 docker compose -f "$REPO/docker-compose.yml" restart nakama >/dev/null 2>&1
-sleep 14
+# Poll the server back up rather than guessing how long it takes. A fixed sleep
+# here is the same bug the dev-RPC helpers had elsewhere in this suite: when the
+# restart ran long, the rejoin client connected to nothing and the check
+# reported "on rejoin the tower drew: nothing" — which is true, and says nothing
+# about persistence, the thing actually under test.
+for _ in $(seq 1 60); do
+  [ "$(curl -s -o /dev/null -w '%{http_code}' "$HOST/healthcheck")" = "200" ] && break
+  sleep 1
+done
+sleep 2   # the runtime registers its match handler just after the port opens
 launch m5_after_restart --slot=keeper_a --world=HRT$TAG --scene=tower >/dev/null
 sleep 10
 kill_all

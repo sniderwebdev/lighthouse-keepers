@@ -40,19 +40,49 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
   -H "Content-Type: application/json" -d '{"id":"lk-m7-verifier-0001"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
 
+# --- dev RPCs: ask until the world answers -----------------------------------
+#
+# A world is only reachable once its match is LIVE, and how long a client takes
+# to get there is a property of the machine, not of anything under test. Every
+# verifier that guessed a sleep here has eventually been wrong: verify_m8.sh
+# taught a world that did not exist yet and blamed the milestone chain four
+# steps later, and verify_m4.sh raced its own autowalk route. Both were
+# invisible because the answer went to /dev/null.
+rpc_log() { cat >>"$OUT/rpc.log"; echo >>"$OUT/rpc.log"; }
+retry_rpc() { # retry_rpc <command...>
+  local i out
+  for i in $(seq 1 20); do
+    out=$("$@")
+    printf '%s\n' "$out" | rpc_log
+    case "$out" in
+      *"no live match"*) sleep 1.0 ;;
+      *) return 0 ;;
+    esac
+  done
+  echo "rpc never took: $*" >&2
+  return 1
+}
+
+
 # patch_kit is TAUGHT by the crab now (CONTENT.md). M7's subject is the LAMP —
 # the chain, the tandem gate, the beat — and the crab's errands are M6's
 # criteria. Put the world into the taught state rather than replaying them here.
-teach() { # teach <world>
+teach_once() { # teach <world>
   curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\"" >/dev/null
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\""
+}
+teach() { # teach <world>
+  retry_rpc teach_once "$@"
 }
 
-set_cycle() { # set_cycle <world> <cycle>
+set_cycle_once() { # set_cycle <world> <cycle>
   curl -s -X POST "$HOST/v2/rpc/debug_set_tide" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":0.0,\\\"cycle\\\":$2}\"" >/dev/null
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":0.0,\\\"cycle\\\":$2}\""
+}
+set_cycle() { # set_cycle <world> <cycle>
+  retry_rpc set_cycle_once "$@"
 }
 gate_fires() { # count the gate firings in the server log
   docker compose -f "$REPO/docker-compose.yml" logs --since "${1:-2m}" nakama 2>/dev/null \

@@ -41,22 +41,52 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
   -H "Content-Type: application/json" -d '{"id":"lk-m6-verifier-0001"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
 
+# --- dev RPCs: ask until the world answers -----------------------------------
+#
+# A world is only reachable once its match is LIVE, and how long a client takes
+# to get there is a property of the machine, not of anything under test. Every
+# verifier that guessed a sleep here has eventually been wrong: verify_m8.sh
+# taught a world that did not exist yet and blamed the milestone chain four
+# steps later, and verify_m4.sh raced its own autowalk route. Both were
+# invisible because the answer went to /dev/null.
+rpc_log() { cat >>"$OUT/rpc.log"; echo >>"$OUT/rpc.log"; }
+retry_rpc() { # retry_rpc <command...>
+  local i out
+  for i in $(seq 1 20); do
+    out=$("$@")
+    printf '%s\n' "$out" | rpc_log
+    case "$out" in
+      *"no live match"*) sleep 1.0 ;;
+      *) return 0 ;;
+    esac
+  done
+  echo "rpc never took: $*" >&2
+  return 1
+}
+
+
 # Put a world into a story state without replaying the systems that produce it.
 # The subject here is the CRAB; the stairs are somebody else's acceptance
 # criteria, and rebuilding them inside this test would only add ways to fail
 # for reasons that have nothing to do with the crab.
-setflag() { # setflag <world> <flag>
+setflag_once() { # setflag <world> <flag>
   curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"$2\\\"}\"" >/dev/null
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"$2\\\"}\""
+}
+setflag() { # setflag <world> <flag>
+  retry_rpc setflag_once "$@"
 }
 
-set_tide() { # set_tide <world> <t> [cycle]
+set_tide_once() { # set_tide <world> <t> [cycle]
   local body="{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":$2"
   [ $# -ge 3 ] && body="$body,\\\"cycle\\\":$3"
   body="$body}"
   curl -s -X POST "$HOST/v2/rpc/debug_set_tide" -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" -d "\"$body\"" >/dev/null
+    -H "Content-Type: application/json" -d "\"$body\""
+}
+set_tide() { # set_tide <world> <t> [cycle]
+  retry_rpc set_tide_once "$@"
 }
 
 echo "=============================================================="

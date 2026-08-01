@@ -126,10 +126,14 @@ decision until an ear lands on it.
 
 **A third instance of the same bug class.** `verify_m4.sh` had the timed-sleep
 race that `verify_m8.sh` had, and this milestone's own audio autoload made boot
-slow enough to expose it. Worth a future queue item: no verifier should sleep a
-guess before a dev RPC, and no dev RPC response should go to `/dev/null`. M4, M8
-and M9 are fixed; **M2, M3, M5, M6 and M7 have not been audited** for the same
-pattern.
+slow enough to expose it.
+
+**Audited afterwards at the author's request: all five of M2, M3, M5, M6 and M7
+carried it too**, and two were worse than a race — verify_m2.sh had a timed
+movement leg the Testing law forbids by name, and verify_m5.sh slept a guess
+through a whole server restart. All fixed; every dev RPC in the suite now
+retries until the world answers and logs every response. No verifier sleeps a
+guess before a dev RPC any more.
 
 **The first full suite run failed broadly and the failures were not real** —
 machine contention; every one was clean when re-run alone. Only M4's survived
