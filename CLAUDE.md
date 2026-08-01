@@ -90,6 +90,10 @@ gamepad *first*. Keyboard/mouse is an adaptation, never the design target.
 - Synthesized-input checks prove systems, not feel. Feel parameters (speeds,
   timings, deadzones) are tuned only via logged human playtests
   (`PLAYTESTS.md`); do not silently change them based on automated runs.
+- **When a deliberate design change contradicts a test's letter, reinterpret
+  the test toward the intent it was defending** — never delete the guard, never
+  let a dead assertion block shipped design. Flag the judgment in `STATUS.md`
+  and keep the change revert-clean.
 
 ## Definition of done (every task)
 
@@ -141,6 +145,23 @@ Writing to the one you do not own is how they start disagreeing.
   `STATUS.md` and await a new `NEXT.md`.
 - If an item conflicts with this file or with reality, mark it `[BLOCKED]`
   with one sentence and continue. Do not improvise around it.
+- **Push `main` to `origin` at session end.** Work that exists only on one
+  machine is one disk failure from not existing.
+
+### STATUS.md provenance
+
+`STATUS.md` is a claim about the world, and the expensive failures are the
+claims that were true once. So every factual claim carries its provenance:
+
+- **`[VERIFIED <date>]`** — re-proven by a run *this session*.
+- **`[CARRIED]`** — inherited from a previous STATUS and NOT re-proven. A
+  carried claim is a lead, not a fact.
+- **Any AC whose measurement apparatus changed since its last pass reverts to
+  `UNVERIFIED` automatically, until it is re-run.** A passing test that was
+  edited is not a passing test — it is an untested test that used to pass.
+
+That last rule exists because it has already bitten: M8 AC1 read PASS for days
+against a binary nobody had built.
 
 ## Things you must NOT do
 
