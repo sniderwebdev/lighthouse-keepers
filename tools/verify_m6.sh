@@ -66,11 +66,20 @@ echo "=============================================================="
 launch m6_b_a --slot=keeper_a --world=BOT$TAG --autowalk=read_bottle >/dev/null
 launch m6_b_b --slot=keeper_b --world=BOT$TAG >/dev/null
 sleep 4
-BEFORE=$(grep -cE "\[bottle\] bottle_0[123] on the sand" "$OUT/m6_b_a.log" || true)
-# Cycle 0: nothing has washed in yet, because nothing has washed in yet.
-[ "$BEFORE" = "0" ]
-check "nothing is on the sand before a cycle has turned" $? \
-  "$BEFORE bottles present at cycle 0"
+BEFORE=$(grep -oE "\[bottle\] bottle_0[123] on the sand" "$OUT/m6_b_a.log" | sort -u)
+BEFORE_N=$(echo "$BEFORE" | grep -c . || true)
+# Cycle 0 used to be a bare shore. Since M9's arrival it is not: bottle_01 is
+# placed by freshWorld(), because a first session with nothing to read was the
+# slice's worst finding. What must STILL be true is that the tide is the only
+# way anything FURTHER arrives — chapters 2 and 3 wait their turn.
+[ "$BEFORE_N" = "1" ] && echo "$BEFORE" | grep -q bottle_01
+check "only the arrival letter is on the sand before a cycle has turned" $? \
+  "$(echo "$BEFORE" | tr '\n' ' ')"
+
+LATER=$(echo "$BEFORE" | grep -cE "bottle_0[23]" || true)
+[ "$LATER" = "0" ]
+check "no later chapter has jumped the tide" $? \
+  "$LATER of chapters 2-3 present at cycle 0"
 
 set_tide BOT$TAG 0.0 1
 sleep 16
@@ -78,6 +87,8 @@ kill_all
 
 ARRIVED=$(grep -oE "\[bottle\] bottle_0[123] on the sand" "$OUT/m6_b_a.log" | sort -u)
 ARRIVED_N=$(echo "$ARRIVED" | grep -c . || true)
+# Still one: the arrival letter is the one eligible bottle, and turning a cycle
+# does not conjure a second while chapter 2 is still waiting on a flag.
 [ "$ARRIVED_N" = "1" ] && echo "$ARRIVED" | grep -q bottle_01
 check "exactly one bottle washed in, and only the eligible one" $? \
   "$(echo "$ARRIVED" | tr '\n' ' ')"
