@@ -78,3 +78,13 @@ signal keeper_presence_changed(keeper_id: String, present: bool)  # keeper_id = 
 ## authoritative; see Command.OP_POSE. `sent_at` is the sender's clock in
 ## seconds, meaningful only as a difference against that same sender.
 signal keeper_pose_received(slot: String, pos: Vector2, facing: int, sent_at: float, room: String)
+
+## A sound to play, by id, matching a file under assets/audio/sfx/.
+##
+## Only for the one-shots that have no signal of their own that means exactly
+## the right thing. A page turning, a wheel ticking and a bench crafting are all
+## invisible to every other signal here, so they ask directly. Anything that
+## ALREADY has an unambiguous announcement — a milestone sealing, the lamp
+## lighting, a keeper caught — is taken off that instead, so there is never a
+## second thing to keep in step.
+signal sfx_requested(id: String)

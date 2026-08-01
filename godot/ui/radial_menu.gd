@@ -115,6 +115,8 @@ func _process(_delta: float) -> void:
 		if picked != _selected:
 			_selected = picked
 			_refresh_all()
+			# The wheel's only feedback that the thumb crossed a boundary.
+			EventBus.sfx_requested.emit("radial_tick")
 
 	# Release confirms (PLAN.md M4). Letting go without ever aiming just closes:
 	# crafting whatever happened to be under the thumb would be a surprise, and
@@ -159,6 +161,9 @@ func _confirm() -> void:
 		close()
 		return
 	_log("crafting %s at %s" % [def.id, _station.station_id])
+	# Sounds on the gesture, not on the server's answer: this is the sound of
+	# letting go of the button, and it would read as broken arriving late.
+	EventBus.sfx_requested.emit("craft")
 	Net.send_command(Command.craft(def.id, _station.station_id))
 	close()
 

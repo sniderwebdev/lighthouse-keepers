@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://ui/dialogue_box.tscn" id="7_dialogue"]
 [ext_resource type="PackedScene" path="res://ui/log_book.tscn" id="8_log"]
 [ext_resource type="PackedScene" path="res://ui/tuning_overlay.tscn" id="9_tune"]
+[ext_resource type="PackedScene" path="res://ui/audio_settings.tscn" id="10_audio"]
 
 [node name="GameMenus" type="CanvasLayer"]
 layer = 50
@@ -43,5 +44,9 @@ unique_name_in_owner = true
 visible = false
 
 [node name="Tuning" parent="." instance=ExtResource("9_tune")]
+unique_name_in_owner = true
+visible = false
+
+[node name="AudioSettings" parent="." instance=ExtResource("10_audio")]
 unique_name_in_owner = true
 visible = false

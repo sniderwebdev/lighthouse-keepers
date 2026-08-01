@@ -49,6 +49,7 @@ func open(bottle_id: String, slot: String, input_prefix: String) -> void:
 	# Focus goes to the single stop immediately, or a pad has nothing to press.
 	_button.grab_focus()
 	_log("opened %s (%d page(s))" % [bottle_id, _pages.size()])
+	EventBus.sfx_requested.emit("bottle_open")
 
 func close() -> void:
 	if not _open:
@@ -80,6 +81,7 @@ func _advance() -> void:
 		_page += 1
 		_refresh()
 		_log("page %d of %d" % [_page + 1, _pages.size()])
+		EventBus.sfx_requested.emit("page_turn")
 		return
 	if WorldState.bottle_state(_bottle_id) == "washed_up":
 		_log("finished %s" % _bottle_id)

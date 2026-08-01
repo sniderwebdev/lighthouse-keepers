@@ -9,6 +9,7 @@ class_name PauseMenu
 signal chose_inventory()
 signal chose_debug()
 signal chose_tuning()
+signal chose_audio()
 signal closed()
 
 @onready var _items: VBoxContainer = %Items
@@ -19,6 +20,7 @@ func _ready() -> void:
 	%Inventory.pressed.connect(func() -> void: chose_inventory.emit())
 	%DebugReadout.pressed.connect(func() -> void: chose_debug.emit())
 	%Tuning.pressed.connect(func() -> void: chose_tuning.emit())
+	%Audio.pressed.connect(func() -> void: chose_audio.emit())
 	%Resume.pressed.connect(close)
 	for child in _items.get_children():
 		var button := child as Button

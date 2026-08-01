@@ -33,6 +33,7 @@ EventBus="*res://autoload/event_bus.gd"
 Tuning="*res://autoload/tuning.gd"
 Net="*res://autoload/net.gd"
 WorldState="*res://autoload/world_state.gd"
+Audio="*res://autoload/audio.gd"
 
 [display]
 

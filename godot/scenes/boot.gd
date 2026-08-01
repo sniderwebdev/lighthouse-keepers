@@ -64,6 +64,7 @@ var _debug_gather: PackedStringArray = []
 var _ui_selftest := false
 var _dropin_selftest := false
 var _tuning_selftest := false
+var _audio_selftest := false
 var _debug_advance: PackedStringArray = []
 var _debug_harvest := false
 var _debug_craft: PackedStringArray = []
@@ -208,6 +209,8 @@ func _parse_flags() -> void:
 			_debug_gather = arg.split("=", true, 1)[1].split(",")
 		elif arg == "--tuning-selftest":
 			_tuning_selftest = true
+		elif arg == "--audio-selftest":
+			_audio_selftest = true
 		elif arg == "--ui-selftest":
 			_ui_selftest = true
 		elif arg == "--dropin-selftest":
@@ -297,6 +300,8 @@ func _enter_world() -> void:
 		_run_dropin_selftest()
 	if _tuning_selftest:
 		_run_tuning_selftest(menus)
+	if _audio_selftest:
+		_run_audio_selftest(menus)
 	_log("world entered: %s (%s)" % [_scene, _mode_label()])
 
 ## What kind of session this is, for the log. "couch, solo so far" is the drop-in
@@ -397,6 +402,36 @@ func _run_tuning_selftest(menus: GameMenus) -> void:
 	_send_action("cancel")
 	await get_tree().create_timer(0.5).timeout
 	_log("tunetest: overlay open=%s (expected false)" % menus.any_open())
+
+## Opens the volume panel the way a player would — pause, then the entry — and
+## turns every bus with real direction events. Same shape as the tuning selftest
+## because it is the same gesture on a different list.
+func _run_audio_selftest(menus: GameMenus) -> void:
+	await get_tree().create_timer(2.0).timeout
+	_log("audiotest: before %s" % Audio.summary())
+	_send_action("menu_pause")
+	await get_tree().create_timer(0.5).timeout
+	# The pause menu's fourth entry is the volume panel.
+	for i in 3:
+		_send_action("ui_down")
+		await get_tree().create_timer(0.25).timeout
+	_send_action("ui_accept")
+	await get_tree().create_timer(0.6).timeout
+	_log("audiotest: overlay open=%s" % menus.any_open())
+
+	for bus in Audio.BUSES:
+		# Left, not right: the defaults are high enough that Master would clip at
+		# the top of its range and the turn would be a no-op that reads as a bug.
+		_send_action("ui_left")
+		await get_tree().create_timer(0.3).timeout
+		_log("audiotest: %s now %d%%" % [bus, roundi(Audio.get_volume(bus) * 100.0)])
+		_send_action("ui_down")
+		await get_tree().create_timer(0.25).timeout
+
+	_log("audiotest: after %s" % Audio.summary())
+	_send_action("cancel")
+	await get_tree().create_timer(0.5).timeout
+	_log("audiotest: overlay open=%s (expected false)" % menus.any_open())
 
 func _send_action(action: String) -> void:
 	var down := InputEventAction.new()
