@@ -128,6 +128,10 @@ func become_local(prefix: String) -> void:
 	_has_pose = true
 	_elsewhere = false
 	_update_visibility()
+	# Their prompt was suppressed while they were a mirror. If they are already
+	# standing at something, say so now rather than at the next target change —
+	# a player who just sat down should not have to step away and back.
+	_on_target_changed(_interactor.target)
 
 # --- local: read the pad, move, publish ---
 
@@ -293,7 +297,12 @@ func _on_ui_modal_changed(open: bool) -> void:
 		_on_target_changed(_interactor.target)
 
 func _on_target_changed(target: Interactable) -> void:
-	if target == null:
+	# A prompt says what YOUR button will do. The other keeper's Interactor keeps
+	# finding things regardless — it rides along with their mirrored position —
+	# and without this gate their "Gather kelp" renders on your screen, over a
+	# pile you are nowhere near. Harmless on a couch, where both keepers really
+	# are yours; nonsense online.
+	if not is_local or target == null:
 		_prompt.visible = false
 		return
 	_prompt_label.text = target.prompt_text()
