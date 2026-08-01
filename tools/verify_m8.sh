@@ -10,7 +10,11 @@ set -uo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GODOT="${GODOT:-/Applications/Godot.app/Contents/MacOS/Godot}"
-APP="$REPO/build/macos/app/Lighthouse Keepers.app/Contents/MacOS/Lighthouse Keepers"
+# AC1 is "it runs from a BUILT binary", so this must be the binary the build just
+# produced. The macOS export is a ZIP; pointing at build/macos/app/ meant running
+# whatever had last been unzipped there by hand — which, when this was found, was
+# a copy two days older than the code under test. Unpacked per run below.
+APP=""
 EXE="$REPO/build/windows/LighthouseKeepers.exe"
 OUT="${OUT:-$REPO/.m8-evidence}"
 HOST="http://127.0.0.1:7350"
@@ -19,6 +23,17 @@ mkdir -p "$OUT"
 rm -f "$OUT"/*.log
 
 TAG=$(date +%s | tail -c 5)
+
+APP_ZIP="$REPO/build/macos/LighthouseKeepers.zip"
+if [ ! -f "$APP_ZIP" ]; then
+  echo "no macOS build at $APP_ZIP — run tools/build.sh first" >&2
+  exit 1
+fi
+rm -rf "$OUT/app"
+mkdir -p "$OUT/app"
+unzip -q "$APP_ZIP" -d "$OUT/app"
+APP="$OUT/app/Lighthouse Keepers.app/Contents/MacOS/Lighthouse Keepers"
+chmod +x "$APP"
 
 pass=0
 fail=0
@@ -51,18 +66,46 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
   -H "Authorization: Basic $(printf 'defaultkey:' | base64)" \
   -H "Content-Type: application/json" -d '{"id":"lk-m8-verifier-0001"}' \
   | python3 -c "import sys,json;print(json.load(sys.stdin)['token'])")
-set_cycle() {
+# Every dev RPC's answer is kept. Discarding it means a world that quietly never
+# entered the state the run assumes, and an assertion three steps later failing
+# for a reason nothing in the output explains — which is exactly how the flag
+# below went missing while AC1 blamed the milestone chain.
+rpc_log() { cat >>"$OUT/rpc.log"; echo >>"$OUT/rpc.log"; }
+
+## A world is only reachable once its match is LIVE, and how long a 180MB binary
+## takes to get there is a property of the machine, not of anything under test.
+## Sleeping a guessed six seconds worked until the binary grew; then `teach`
+## started landing before the world existed, silently, and the playthrough failed
+## four steps downstream. Ask until it answers instead.
+retry_rpc() { # retry_rpc <command...>
+  local i out
+  for i in $(seq 1 20); do
+    out=$("$@")
+    printf '%s\n' "$out" | rpc_log
+    case "$out" in
+      *"no live match"*) sleep 1.5 ;;
+      *) return 0 ;;
+    esac
+  done
+  return 1
+}
+
+set_cycle_once() {
   curl -s -X POST "$HOST/v2/rpc/debug_set_tide" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":0.0,\\\"cycle\\\":$2}\"" >/dev/null
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":0.0,\\\"cycle\\\":$2}\""
 }
+set_cycle() { retry_rpc set_cycle_once "$1" "$2"; }
 
 # patch_kit is TAUGHT by the crab now (CONTENT.md). M8's subject is the BUILT
 # BINARY, not the crab's errands, so put the world into the taught state.
-teach() { # teach <world>
+teach_once() { # teach_once <world>
   curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\"" >/dev/null
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\""
+}
+teach() { # teach <world>
+  retry_rpc teach_once "$1"
 }
 
 echo "=============================================================="
@@ -112,6 +155,42 @@ echo "=============================================================="
 echo "AC2 — four tuning values, adjustable from a pad, applying"
 echo "      within a second, surviving relaunch"
 echo "=============================================================="
+
+# The selftest turns every value ONE STEP RIGHT from whatever is already loaded,
+# and persists it. So this assertion is only knowable if we control where it
+# starts: run it from the committed defaults, and derive what one step right of
+# those looks like from Tuning.DEFAULTS rather than hard-coding a number.
+#
+# Hard-coding it (this used to assert the literal "walk speed 95") failed on
+# every run after the first — the value ratcheted 90 -> 95 -> 100 across runs —
+# and left whatever it ratcheted to in the cfg for the next human to play at.
+TUNING_CFG="$HOME/Library/Application Support/Godot/app_userdata/Lighthouse Keepers/tuning.cfg"
+reset_tuning_cfg() { rm -f "$TUNING_CFG"; }
+reset_tuning_cfg
+
+# One step right of every committed default, rendered exactly the way
+# Tuning.summary() renders it, straight out of the GDScript source of truth.
+EXPECTED_TUNING=$(python3 - "$REPO/godot/autoload/tuning.gd" <<'PY'
+import re, sys
+
+src = open(sys.argv[1]).read()
+block = re.search(r"const DEFAULTS.*?\n\}", src, re.S).group(0)
+row = re.compile(
+    r'"(\w+)":\s*\[\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),\s*([-\d.]+),'
+    r'\s*"([^"]*)",\s*"([^"]*)"\s*\]'
+)
+parts = []
+for key, default, lo, hi, step, label, unit in row.findall(block):
+    value = min(max(float(default) + float(step), float(lo)), float(hi))
+    # Tuning._format: two decimals under ten, none at or above it.
+    text = ("%.2f" % value) if value < 10.0 else ("%.0f" % value)
+    if unit:
+        text += " " + unit
+    parts.append("%s %s" % (label, text))
+print(" · ".join(parts))
+PY
+)
+
 launch_built m8_tune --slot=keeper_a --world=TUN$TAG --tuning-selftest --tuning-persist >/dev/null
 sleep 16
 kill_all
@@ -158,8 +237,9 @@ launch_built m8_tune2 --slot=keeper_a --world=TUN$TAG >/dev/null
 sleep 8
 kill_all
 RELOADED=$(grep -oE "\[tuning\] loaded: .*" "$OUT/m8_tune2.log" | tail -1)
-echo "$RELOADED" | grep -q "walk speed 95"
-check "the values survived relaunch" $? "${RELOADED:-nothing was loaded}"
+[ "$RELOADED" = "[tuning] loaded: $EXPECTED_TUNING" ]
+check "the values survived relaunch" $? \
+  "expected '$EXPECTED_TUNING'; got '${RELOADED#*loaded: }'"
 
 # ...and an automated run must NOT inherit them, or every timing assertion after
 # a playtest is quietly measuring somebody's experiment.
@@ -170,6 +250,11 @@ IGNORED=$(grep -oE "\[tuning\] harness run: using committed defaults" "$OUT/m8_t
 [ -n "$IGNORED" ]
 check "a harness run measures committed defaults, not the experiment" $? \
   "${IGNORED:-the harness inherited tuning.cfg}"
+
+# The selftest's experiment does not outlive the selftest. Without this, the next
+# person to launch the game plays at values nobody chose — and the author tunes
+# a playtest from a baseline this script invented.
+reset_tuning_cfg
 
 echo
 echo "=============================================================="
