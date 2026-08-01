@@ -52,20 +52,45 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
 # M4 is about the crafting wheel, and the wheel does not care which recipe
 # taught it — so put the world into the taught state rather than playing the
 # crab's errand inside a crafting test.
-teach() { # teach <world>
+teach_once() { # teach_once <world>
   curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
-    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\"" >/dev/null
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"flag\\\":\\\"crab_taught_patch_kit\\\"}\""
+}
+
+## Teach the world, and do not come back until it took.
+##
+## This used to be `sleep 4; teach`, which is a race against the autowalk route:
+## the route starts as soon as the client joins, walks to the bench in ~1.6s and
+## releases ~2s later, so the flag had roughly a second of margin to land in. It
+## held until the client got slower to boot, and then AC1 started failing with
+## "released on a locked recipe" — the wheel telling the truth about a world the
+## test had not finished setting up.
+##
+## The fix is ordering, not a bigger sleep: bring the world live with a client
+## that has no route, teach it, and only then start the one that acts.
+teach() { # teach <world>
+  local i out
+  for i in $(seq 1 20); do
+    out=$(teach_once "$1")
+    printf '%s\n' "$out" >>"$OUT/rpc.log"
+    case "$out" in
+      *'"ok":true'*) return 0 ;;
+      *) sleep 1.0 ;;
+    esac
+  done
+  echo "teach($1) never took" >&2
+  return 1
 }
 
 echo "=============================================================="
 echo "AC1 — craft succeeds only when affordable; inputs decrement and"
 echo "      output increments on BOTH clients atomically"
 echo "=============================================================="
-launch m4_craft_a --slot=keeper_a --world=CFA$TAG $SEED --autowalk=craft_at_bench >/dev/null
 launch m4_craft_b --slot=keeper_b --world=CFA$TAG >/dev/null
-sleep 4; teach CFA$TAG
-sleep 20
+teach CFA$TAG
+launch m4_craft_a --slot=keeper_a --world=CFA$TAG $SEED --autowalk=craft_at_bench >/dev/null
+sleep 24
 kill_all
 
 CRAFTED=$(grep -oE "\[radial\] crafting [a-z_]+ at [a-z_]+" "$OUT/m4_craft_a.log" | tail -1)
@@ -99,12 +124,14 @@ echo "=============================================================="
 echo "AC2 — an unaffordable recipe is visibly disabled, and selecting"
 echo "      it does nothing server-side"
 echo "=============================================================="
-launch m4_short --slot=keeper_a --world=CFB$TAG --debug-gather=driftwood_01,kelp_01 \
-  --autowalk=craft_unaffordable >/dev/null
 # Taught but unaffordable is the state under test here — a LOCKED recipe would
 # be disabled for the wrong reason and the check would pass without meaning it.
-sleep 4; teach CFB$TAG
-sleep 20
+# So the teaching has to be finished before the route can reach the bench.
+launch m4_short_primer --slot=keeper_b --world=CFB$TAG >/dev/null
+teach CFB$TAG
+launch m4_short --slot=keeper_a --world=CFB$TAG --debug-gather=driftwood_01,kelp_01 \
+  --autowalk=craft_unaffordable >/dev/null
+sleep 24
 kill_all
 
 REFUSED=$(grep -oE "\[radial\] released on unaffordable [a-z_]+; sending nothing" "$OUT/m4_short.log" | tail -1)
@@ -133,15 +160,17 @@ echo
 echo "=============================================================="
 echo "AC3 — the radial is operable by stick AND by d-pad"
 echo "=============================================================="
+launch m4_stick_primer --slot=keeper_b --world=CFC$TAG >/dev/null
+teach CFC$TAG
 launch m4_stick --slot=keeper_a --world=CFC$TAG $SEED --autowalk=craft_at_bench >/dev/null
-sleep 4; teach CFC$TAG
-sleep 20
+sleep 24
 kill_all
 STICK=$(grep -oE "\[radial\] crafting patch_kit at workbench" "$OUT/m4_stick.log" | tail -1)
 
+launch m4_dpad_primer --slot=keeper_b --world=CFD$TAG >/dev/null
+teach CFD$TAG
 launch m4_dpad --slot=keeper_a --world=CFD$TAG $SEED --autowalk=craft_dpad >/dev/null
-sleep 4; teach CFD$TAG
-sleep 20
+sleep 24
 kill_all
 DPAD=$(grep -oE "\[radial\] crafting patch_kit at workbench" "$OUT/m4_dpad.log" | tail -1)
 
