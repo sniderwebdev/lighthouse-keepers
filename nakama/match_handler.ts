@@ -903,6 +903,7 @@ function advanceTide(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
   const step = 1 / (Math.max(1, t.cycle_seconds) * TICK_RATE);
   const before = t.t;
   t.t += step;
+  let rolledBottles = false;
   if (t.t >= 1) {
     t.t -= 1;
     t.cycle += 1;
@@ -910,6 +911,7 @@ function advanceTide(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
     // is the only clock the world has, and content arrives on it (DESIGN §2).
     rollSpawns(s, dispatcher);
     rollBottles(s, dispatcher);
+    rolledBottles = true;
   }
   // phase index from t (4 phases per cycle), with rare storm on HIGH.
   const idx = Math.floor(t.t * PHASES.length) % PHASES.length;
@@ -917,6 +919,23 @@ function advanceTide(s: MatchState, dispatcher: nkruntime.MatchDispatcher) {
   if (newPhase !== t.phase) {
     t.phase = newPhase;
     s.dirty = true;
+    // HUNGRY STORY does not wait for the cycle to come round (PLAN.md M9).
+    //
+    // Materials are the tide's to ration; story is not. A chapter whose flag has
+    // just been earned but which has not washed in yet means the player did
+    // everything asked of them and got told to wait — up to a full cycle, which
+    // at the committed 480s is eight minutes of nothing. That is the tide acting
+    // as a lock rather than as delivery, and it is the one place the clock can
+    // starve the game instead of pacing it.
+    //
+    // Safe on every boundary because eligibility is self-limiting: each chapter
+    // requires the previous one to have been READ, so at most one unread letter
+    // can be on the sand at a time. rollBottles is a no-op when nothing is
+    // eligible, which is the common case — this only fires when the story is
+    // actually waiting.
+    if (!rolledBottles) {
+      rollBottles(s, dispatcher);
+    }
     broadcast(dispatcher, { tide: tideDiff(t) });
   } else if (Math.floor(before * 20) !== Math.floor(t.t * 20)) {
     // lightweight progress ticks for smooth client interpolation

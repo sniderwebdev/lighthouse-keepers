@@ -274,6 +274,65 @@ check "you can find the humans by finding the warmth" $? \
 
 echo
 echo "=============================================================="
+echo "AC4 — story that is hungry arrives on a phase, not a cycle"
+echo "=============================================================="
+
+# The trap this has to avoid: making a bottle eligible with an RPC that ALSO
+# rolls. debug_set_tide rolls when it is given a cycle, so the world is left to
+# reach cycle 1 on its own with a short cycle, and only THEN is chapter 2
+# unlocked — mid-cycle, with the next cycle boundary a long way off.
+PAC=PAC$TAG
+set_cycle_seconds() { # set_cycle_seconds <world> <seconds>
+  curl -s -X POST "$HOST/v2/rpc/debug_set_cycle_seconds" -H "Authorization: Bearer $TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"seconds\\\":$2}\"" >>"$OUT/rpc.log" 2>&1
+  echo >>"$OUT/rpc.log"
+}
+
+launch m9_pacing --slot=keeper_a --world=$PAC >/dev/null
+sleep 6
+set_cycle_seconds $PAC 40      # a phase every ten seconds
+# Wait for the world to turn a cycle by itself. bottle_02 is NOT eligible yet —
+# read_bottle_01 is unset — so this boundary spawns nothing, which is the point:
+# it proves what follows did not come from a cycle.
+for i in $(seq 1 30); do
+  grep -q "cycle=1" "$OUT/m9_pacing.log" && break
+  sleep 2
+done
+
+CYCLE_AT_UNLOCK=$(grep -oE "tide=[A-Z]+ *t=[0-9.]+ *cycle=[0-9]+" "$OUT/m9_pacing.log" \
+  | tail -1 | grep -oE "cycle=[0-9]+")
+setflag $PAC read_bottle_01    # chapter 2 becomes eligible, mid-cycle
+sleep 14                       # longer than one phase, far shorter than one cycle
+kill_all
+
+ARRIVED_02=$(grep -oE "\[bottle\] bottle_02 on the sand" "$OUT/m9_pacing.log" | head -1)
+[ -n "$ARRIVED_02" ]
+check "an unlocked chapter washes in without waiting for the cycle" $? \
+  "${ARRIVED_02:-bottle_02 never arrived}"
+
+# The assertion that makes this about PHASES: the cycle counter must not have
+# moved between unlocking the chapter and the letter landing. If it had, this
+# would be the old cycle-boundary path passing under a new name.
+CYCLE_AT_ARRIVAL=$(python3 - "$OUT/m9_pacing.log" <<'PY'
+import re, sys
+cycle = None
+for line in open(sys.argv[1]):
+    m = re.search(r"cycle=(\d+)", line)
+    if m:
+        cycle = m.group(1)
+    if "[bottle] bottle_02 on the sand" in line:
+        print("cycle=%s" % cycle); break
+else:
+    print("cycle=?")
+PY
+)
+[ -n "$CYCLE_AT_UNLOCK" ] && [ "$CYCLE_AT_UNLOCK" = "$CYCLE_AT_ARRIVAL" ]
+check "it arrived inside the same cycle it was unlocked in" $? \
+  "unlocked at ${CYCLE_AT_UNLOCK:-?}, arrived at ${CYCLE_AT_ARRIVAL:-?}"
+
+echo
+echo "=============================================================="
 echo "Standing checks"
 echo "=============================================================="
 (cd "$REPO/nakama" && npx tsc >"$OUT/tsc.log" 2>&1)
