@@ -123,6 +123,25 @@ filenames, either extension. When the mock exists, implement to match its
 layout, hierarchy, focus behavior, and palette, adapted to 640×360 — visual
 simplification is fine; structural deviation is not.
 
+## Session protocol
+
+Two documents carry state between sessions, and they have different owners.
+Writing to the one you do not own is how they start disagreeing.
+
+- **On session start:** read `NEXT.md` and `STATUS.md` before touching code.
+  Execute `NEXT.md` top-down.
+- **On session end (or when a pause is requested):** regenerate `STATUS.md`
+  from evidence — runs made this session, not recollection — in the
+  established format; update `NEXT.md` item states; commit both.
+- **`STATUS.md` is written by the implementation session only.**
+  **`NEXT.md` is written by the planning session only**, with item state
+  markers the one exception the implementation session may touch.
+- Mark each `NEXT.md` item `[DONE]`, `[BLOCKED: why]` or `[SKIPPED: why]` in
+  place. Never delete an item. When every item is terminal, say so in
+  `STATUS.md` and await a new `NEXT.md`.
+- If an item conflicts with this file or with reality, mark it `[BLOCKED]`
+  with one sentence and continue. Do not improvise around it.
+
 ## Things you must NOT do
 
 - Don't invent content (item names, dialogue, recipe values) beyond what
