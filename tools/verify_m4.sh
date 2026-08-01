@@ -169,6 +169,31 @@ MOCK=design/ui/radial_crafting.png
 [ -f "$REPO/$MOCK" ]
 check "the gated mock is present and was built from" $? "$MOCK"
 
+# kelp_tea is the only recipe with no unlock flag at a station, so it is the one
+# that has to work in a world where nothing has been taught yet. A fresh world:
+# gather the kelp, walk to the stove, aim right, let go.
+# Longer than the other routes because it is the only one that crosses the whole
+# beach: the kelp is at the water and the stove is up by the tower.
+KT=KTEA$TAG
+launch m4_kelp_tea --slot=keeper_a --world=$KT --autowalk=craft_kelp_tea >/dev/null
+sleep 30
+kill_all
+
+KT_WHEEL=$(grep -oE "\[radial\] opened at stove .* with \[[^]]*\]" "$OUT/m4_kelp_tea.log" | tail -1)
+echo "$KT_WHEEL" | grep -q "kelp_tea:ready"
+check "an ungated recipe reads as available in a world that has taught nothing" $? \
+  "${KT_WHEEL:-the stove wheel never opened}"
+
+KT_SENT=$(grep -oE "\[radial\] crafting kelp_tea at stove" "$OUT/m4_kelp_tea.log" | tail -1)
+[ -n "$KT_SENT" ]
+check "the wheel crafted kelp_tea at the stove" $? "${KT_SENT:-the wheel sent no kelp_tea craft}"
+
+# And the world agreed: the server is the only thing that can put it in the basket.
+KT_HELD=$(grep -ohE "kelp_tea\":[0-9.]+" "$OUT/m4_kelp_tea.log" | tail -1)
+[ -n "$KT_HELD" ] && [ "${KT_HELD#*:}" != "0.0" ]
+check "the server granted the kelp_tea into the shared basket" $? \
+  "${KT_HELD:-no kelp_tea in the basket}"
+
 echo
 echo "=============================================================="
 echo "AC5 (standing) — no mouse in the wheel; tsc and GDScript clean"

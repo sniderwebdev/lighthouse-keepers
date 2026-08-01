@@ -76,6 +76,20 @@ const ROUTES: Dictionary = {
 	"wheel_pose": [[GO, "workbench"], [AIM, "right", 12.0]],
 	"wheel_pose_short": [[GO, "workbench"], [AIM, "up", 12.0]],
 	"wheel_stove": [[GO, "stove"], [AIM, "up", 10.0]],
+	# The one recipe nobody has to be taught. kelp_01 yields exactly the 2 kelp
+	# kelp_tea costs, so this proves the ungated path end to end from a world
+	# that has never met the crab: pick the kelp up, walk to the stove, aim right
+	# (slot 1 of the stove wheel — chowder is slot 0), let go.
+	"craft_kelp_tea": [
+		[GO, "kelp_01"], [TAP], [WAIT, 1.5],
+		# Settle before reaching: the walk to the stove is the longest in any
+		# route, and a keeper still deciding it has arrived is not yet facing the
+		# thing it arrived at.
+		# kelp_tea is slot 1, which is to the RIGHT — and the stove is above the
+		# keeper, so pushing right is pushing away from it. Hold still until the
+		# wheel is up, then aim.
+		[GO, "stove"], [AIM, "right", 6.0, 1.5], [WAIT, 3.0],
+	],
 	"read_bottle": [[GO, "bottle_01"], [TAP], [WAIT, 0.8], [READ], [WAIT, 4.0]],
 	"read_bottle_pose": [[GO, "bottle_01"], [TAP], [WAIT, 12.0]],
 	"talk_crab": [[GO, "hermit_crab"], [TAP], [WAIT, 1.2], [READ], [WAIT, 3.0]],
@@ -165,8 +179,17 @@ func _run_step(step: Array, delta: float) -> bool:
 		AIM:
 			# Hold interact AND push a direction: the wheel gesture is one hand
 			# doing two things, so a step has to be able to say that.
+			#
+			# The optional fourth value is how long to hold STILL before pushing.
+			# Pushing from the first frame is a race against the station: until
+			# the wheel is open the keeper is still a keeper, and a direction
+			# walks them out of reach before the hold completes. Once it is open
+			# the UI is modal, movement is blocked, and the stick only aims.
+			# Needed wherever the slot you want is not on the side the station is.
 			_press("", true)
-			_hold_dir("", "move_" + String(step[1]))
+			var settle: float = float(step[3]) if step.size() > 3 else 0.0
+			if _step_time >= settle:
+				_hold_dir("", "move_" + String(step[1]))
 			return _step_time >= (float(step[2]) if step.size() > 2 else HOLD_TIME + 1.2)
 		DPAD:
 			_press("", true)
