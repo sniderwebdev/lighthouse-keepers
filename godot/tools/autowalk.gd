@@ -66,6 +66,9 @@ const ROUTES: Dictionary = {
 	],
 	"to_sandbar": [[GO, "sandbar_stand"], [WAIT, 8.0]],
 	"gather_once": [[GO, "driftwood_01"], [TAP], [WAIT, 3.0]],
+	# The arrival (M9): the crates are the first thing in reach, so this route is
+	# the shortest one in the game on purpose.
+	"gather_crate": [[GO, "arrival_crate_01"], [TAP], [WAIT, 3.0]],
 	"gather_spam": [[GO, "driftwood_01"], [MASH, 2.5], [WAIT, 3.0]],
 	"craft_at_bench": [[GO, "workbench"], [AIM, "right"], [WAIT, 3.0]],
 	"craft_unaffordable": [[GO, "workbench"], [AIM, "up"], [WAIT, 3.0]],

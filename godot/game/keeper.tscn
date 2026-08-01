@@ -1,8 +1,9 @@
-[gd_scene load_steps=6 format=3 uid="uid://blighthousekeeperactor"]
+[gd_scene load_steps=7 format=3 uid="uid://blighthousekeeperactor"]
 
 [ext_resource type="Script" path="res://game/keeper.gd" id="1_keeper"]
 [ext_resource type="Texture2D" path="res://art/placeholder/keeper_a.png" id="2_sheet"]
 [ext_resource type="Script" path="res://game/interactor.gd" id="3_interactor"]
+[ext_resource type="Script" path="res://game/keeper_halo.gd" id="4_halo"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_body"]
 size = Vector2(10, 6)
@@ -15,6 +16,11 @@ collision_layer = 2
 collision_mask = 1
 motion_mode = 1
 script = ExtResource("1_keeper")
+
+[node name="Halo" type="Node2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(0, -8)
+script = ExtResource("4_halo")
 
 [node name="Sprite" type="Sprite2D" parent="."]
 unique_name_in_owner = true

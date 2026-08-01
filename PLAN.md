@@ -250,12 +250,19 @@ AC:
   so story never starves behind the tide clock.
 
 AC:
-- [ ] Fresh world: a readable bottle and gatherable arrival crates exist at
+- [x] Fresh world: a readable bottle and gatherable arrival crates exist at
       spawn; the "reach the story in 60s" walk is verified by harness.
-- [ ] Screenshot harness at HIGH tide: keeper sprite luminance stays within
+      *(`verify_m9.sh` AC1 — reached in 6.94s.)*
+- [x] Screenshot harness at HIGH tide: keeper sprite luminance stays within
       warm-ramp range while environment drops; both keepers distinguishable.
+      *(`verify_m9.sh` AC3 — warm pixels read 81 luminance above the shore.)*
 - [ ] With chapter 2 unlocked and unspawned, a bottle arrives within one phase,
-      not one cycle.
+      not one cycle. **NOT BUILT** — bottle pacing was left out of the M9 pass
+      that did the other two; `rollBottles` still fires only on cycle rollover.
+
+Also delivered in this pass, from CONTENT.md's bottle_2 implementation note
+rather than from the list above: the LOW-tide shoal glimmer (three flashes, a
+pause, three), visible only after bottle_2 is read. `verify_m9.sh` AC2.
 
 ## M10 — Sound & sight (parallel tracks)
 

@@ -161,6 +161,11 @@ interface NodeDef {
   zone: string;
   respawn_cycles: number;
 }
+
+/// A node the sea does not restock. Expressed as a respawn interval longer than
+/// any world will live rather than as a special case, so `nodeIsReady` stays one
+/// line of arithmetic with no "unless" in it.
+const NEVER_RESPAWNS = 1000000;
 const NODES: { [id: string]: NodeDef } = {
   driftwood_01: { item: "driftwood", yield: 3, zone: "sandbar", respawn_cycles: 1 },
   driftwood_02: { item: "driftwood", yield: 1, zone: "mid_beach", respawn_cycles: 1 },
@@ -176,6 +181,19 @@ const NODES: { [id: string]: NodeDef } = {
   fish_stub_01: { item: "fish_stub", yield: 2, zone: "sandbar", respawn_cycles: 1 },
   // "Bring me a smooth stone from the pools. Low tide." — the crab, CONTENT.md.
   smooth_stone_01: { item: "smooth_stone", yield: 1, zone: "sandbar", respawn_cycles: 1 },
+
+  // THE ARRIVAL (PLAN.md M9). What's left of the city life, washed in with you.
+  // They sit in the yard, which is walkable in every phase but STORM, so the
+  // first thing a new keeper can do does not depend on the tide being kind.
+  //
+  // Ordinary materials, deliberately: the crates are a first handhold, not a
+  // separate economy. Between them they yield 3 driftwood against clear_hearth's
+  // cost of 4 — enough that the beach is a short walk rather than a long one,
+  // not so much that the first gathering loop is skipped. TUNING NOTE: those two
+  // numbers are the whole feel of the opening minute and are the author's to
+  // change; nothing else depends on them.
+  arrival_crate_01: { item: "driftwood", yield: 2, zone: "yard", respawn_cycles: NEVER_RESPAWNS },
+  arrival_crate_02: { item: "driftwood", yield: 1, zone: "yard", respawn_cycles: NEVER_RESPAWNS },
 };
 
 interface TideState {
@@ -1063,14 +1081,35 @@ function loadWorld(nk: nkruntime.Nakama, worldId: string): WorldState {
       updated_at: stored.updated_at || 0,
     };
   }
+  return freshWorld();
+}
+
+/// THE ARRIVAL (PLAN.md M9).
+///
+/// A new world is not an empty one. The first session used to open on a bare
+/// shore with nothing to read and nothing to pick up until the tide came round
+/// — the worst possible first impression of a game whose whole premise is that
+/// the tide brings you things.
+///
+/// So the wreckage of your own arrival is already on the beach, and Elio's
+/// first letter is already waiting rather than being rolled for. Everything
+/// here is state a fresh world STARTS in; nothing re-applies on later loads.
+function freshWorld(): WorldState {
   return {
     version: 1,
     tide: { phase: "LOW", t: 0, cycle: 0, storm: false, cycle_seconds: SECONDS_PER_CYCLE },
     flags: {},
     inventory: {},
     milestones: {},
+    // Every node absent from this map is ready (see nodeIsReady), so a fresh
+    // world already has its full shore — including the arrival crates — rolled
+    // and waiting. Pre-rolling is the ABSENCE of state, not an entry.
     nodes: {},
-    bottles: {},
+    // Chapter one does not wait on the tide. bottle_01 requires no flag and no
+    // cycle, so rollBottles would have produced it at the first cycle boundary
+    // anyway — this just means the letter is on the sand when you arrive
+    // instead of eight minutes later.
+    bottles: { bottle_01: "washed_up" },
     npcs: {},
     log: [],
     updated_at: Date.now(),

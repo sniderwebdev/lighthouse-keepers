@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://blighthousekeeperbeach"]
+[gd_scene load_steps=20 format=3 uid="uid://blighthousekeeperbeach"]
 
 [ext_resource type="Script" path="res://scenes/beach.gd" id="1_beach"]
 [ext_resource type="Script" path="res://game/keeper_camera.gd" id="2_camera"]
@@ -11,6 +11,7 @@
 [ext_resource type="Texture2D" path="res://art/placeholder/dither.png" id="98_dither"]
 [ext_resource type="PackedScene" path="res://game/bottle_pickup.tscn" id="8_bottle"]
 [ext_resource type="PackedScene" path="res://game/npc.tscn" id="9_npc"]
+[ext_resource type="Script" path="res://game/shoal_glimmer.gd" id="10_glimmer"]
 
 [sub_resource type="RectangleShape2D" id="Shape_wall_h"]
 size = Vector2(1280, 16)
@@ -169,6 +170,11 @@ offset_bottom = 720.0
 texture = ExtResource("98_dither")
 stretch_mode = 1
 modulate = Color(0.239216, 0.372549, 0.298039, 1)
+
+[node name="ShoalGlimmer" type="Node2D" parent="Terrain"]
+position = Vector2(60, 300)
+visible = false
+script = ExtResource("10_glimmer")
 
 [node name="Walls" type="StaticBody2D" parent="."]
 
@@ -347,6 +353,18 @@ position = Vector2(300, 400)
 marker_id = "sandbar_stand"
 face = Vector2(-1, 0)
 
+[node name="tm_arrival_crate_01" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(840, 330)
+marker_id = "arrival_crate_01"
+face = Vector2(-1, 0)
+
+[node name="tm_arrival_crate_02" type="Marker2D" parent="."]
+script = ExtResource("99_marker")
+position = Vector2(920, 280)
+marker_id = "arrival_crate_02"
+face = Vector2(-1, 0)
+
 [node name="Actors" type="Node2D" parent="."]
 unique_name_in_owner = true
 y_sort_enabled = true
@@ -427,6 +445,16 @@ item_id = "fish_stub"
 position = Vector2(196, 214)
 node_id = "smooth_stone_01"
 item_id = "smooth_stone"
+
+[node name="arrival_crate_01" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(820, 330)
+node_id = "arrival_crate_01"
+item_id = "driftwood"
+
+[node name="arrival_crate_02" parent="Actors" instance=ExtResource("5_resource")]
+position = Vector2(900, 280)
+node_id = "arrival_crate_02"
+item_id = "driftwood"
 
 [node name="hermit_crab" parent="Actors" instance=ExtResource("9_npc")]
 position = Vector2(660, 470)

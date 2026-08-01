@@ -62,6 +62,7 @@ const FRAME_UP := 2
 @export var room: String = ""
 
 @onready var _sprite: Sprite2D = %Sprite
+@onready var _halo: KeeperHalo = %Halo
 @onready var _interactor: Interactor = %Interactor
 @onready var _prompt: Node2D = %Prompt
 @onready var _prompt_label: Label = %Prompt/Label
@@ -284,6 +285,15 @@ func _on_ambient_changed(ambient: Color) -> void:
 	)
 	lift.a = _sprite.modulate.a
 	_sprite.modulate = lift
+	_halo.set_ambient(ambient)
+	# The warmth law is a claim about pixels, so say the numbers out loud: what
+	# the world is lit at, and what this keeper ends up lit at. A screenshot can
+	# then be checked against what the code thought it was doing.
+	print("%.3f [warmth] %s ambient_v=%.3f lift=%.3f,%.3f,%.3f halo_darkness=%.3f" % [
+		Time.get_unix_time_from_system(), slot,
+		maxf(ambient.r, maxf(ambient.g, ambient.b)),
+		lift.r, lift.g, lift.b, _halo.darkness,
+	])
 
 # --- reaching for things ---
 
