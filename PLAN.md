@@ -281,11 +281,22 @@ Art track (see ASSET_MANIFEST.md when added; keepers first):
   gather), palette-locked, silhouette-distinct. Then tower interior tileset.
   Everything else stays programmer art until M11.
 
+Music decision: **ONE dusk theme loop** (author, 2026-07-31). Not none, not
+theme-per-act.
+
 AC:
-- [ ] Ambience crossfades track phase flips on both clients; SFX fire on their
+- [x] Ambience crossfades track phase flips on both clients; SFX fire on their
       events in both play modes; sliders persist.
-- [ ] Keeper sheets pass the silhouette test (grayscale thumbnails at 50%
+      *(`verify_m10.sh` AC1–AC3 — 11 checks.)*
+- [x] Keeper sheets pass the silhouette test (grayscale thumbnails at 50%
       scale are still tellable-apart) and the palette check (no off-ramp hexes).
+      *(`tools/check_art.py`, run by `verify_m10.sh` AC4 — worst silhouette
+      overlap 0.72 against a 0.85 limit; zero off-ramp hexes.)*
+
+Both tracks are **placeholder-complete, not art-complete**: the beds and
+one-shots are synthesised (`tools/gen_placeholder_audio.py`) and the keeper
+sheets are drafted in code. `ASSET_MANIFEST.md` is the replacement list and
+`CREDITS.md` records every source and licence.
 
 ## M11 — Content Sessions 2–5 (the real game)
 
