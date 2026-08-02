@@ -14,11 +14,11 @@ Toolchain: Godot 4.6.3.stable.official, Nakama 3.21.1+cd82b6c5, Docker Compose.
 
 ## 1. Git state `[VERIFIED 2026-08-01]`
 
-- **Branch:** `m10-sound-and-sight` (branched from `main`)
-- **HEAD:** `3c66fbb`
-- **Uncommitted:** none except this file and `NEXT.md`
-- **`origin/main`:** at `e2e00c7` — **pushed this session**, verified with
-  `git ls-remote`. The five commits below are not yet pushed; see §7.
+- **Branch:** `main`
+- **HEAD:** `e6bc4f0`
+- **Uncommitted:** none
+- **`origin/main`:** at `e6bc4f0` — everything below is **pushed**, verified
+  with `git ls-remote`. Nothing is waiting on one disk.
 
 ```
 680875d  docs: provenance, and the rule that a passing test can stop being one
@@ -26,7 +26,15 @@ Toolchain: Godot 4.6.3.stable.official, Nakama 3.21.1+cd82b6c5, Docker Compose.
 405974d  M10: keepers who walk, and the list of what still needs drawing
 e9fdc74  M10: the verifier, and both ACs ticked
 3c66fbb  M4: teach the world before the route acts, not four seconds after it starts
+ebcd0bd  docs: STATUS in the provenance format; queue 2026-07-31.2 is terminal
+e6bc4f0  tests: no verifier sleeps a guess before a dev RPC any more
 ```
+
+**Full suite re-run from a clean rebuild at `e6bc4f0`: 186 checks, 1 failure**
+(M8 AC5). `build.sh` exit 0 for both platforms. The retry helpers added by
+`e6bc4f0` fired **17 times** during that single sequential run — 9 in M4, 6 in
+M9, 2 in M2 — each one a silent failure under the old code. `[VERIFIED
+2026-08-01]`
 
 ---
 
