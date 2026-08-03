@@ -1,4 +1,4 @@
-# STATUS.md — handoff, 2026-08-01
+# STATUS.md — handoff, 2026-08-02
 
 Every claim below carries its provenance, per `CLAUDE.md` § "STATUS.md
 provenance":
@@ -12,13 +12,13 @@ Toolchain: Godot 4.6.3.stable.official, Nakama 3.21.1+cd82b6c5, Docker Compose.
 
 ---
 
-## 1. Git state `[VERIFIED 2026-08-01]`
+## 1. Git state `[VERIFIED 2026-08-02]`
 
 - **Branch:** `main`
-- **HEAD:** `e6bc4f0`
 - **Uncommitted:** none
-- **`origin/main`:** at `e6bc4f0` — everything below is **pushed**, verified
-  with `git ls-remote`. Nothing is waiting on one disk.
+- **`origin/main` matches local `main`**, verified with `git ls-remote`.
+  Nothing is waiting on one disk. (This document is the tip commit; the list
+  below runs through the commit before it.)
 
 ```
 680875d  docs: provenance, and the rule that a passing test can stop being one
@@ -28,6 +28,8 @@ e9fdc74  M10: the verifier, and both ACs ticked
 3c66fbb  M4: teach the world before the route acts, not four seconds after it starts
 ebcd0bd  docs: STATUS in the provenance format; queue 2026-07-31.2 is terminal
 e6bc4f0  tests: no verifier sleeps a guess before a dev RPC any more
+adf2e7b  docs: STATUS was stale about its own git state
+4056cba  tests: wait for the thing, instead of bouncing off it until it is there
 ```
 
 **Full suite re-run from a clean rebuild at `e6bc4f0`: 186 checks, 1 failure**
@@ -210,6 +212,8 @@ touched. The new volume panel is not one of the five gated screens.
    M6 24/24, M7 18/18 `[VERIFIED 2026-08-01]`. M2's retry fired twice on that
    run, so the race was live there and not hypothetical.
 
+   **Those retries were themselves audited and removed — see §9.**
+
 ### Open / unresolved
 
 8. `[CARRIED]` **The Windows `.exe` has never been executed on Windows.** Built
@@ -227,6 +231,39 @@ asserts nothing stands in for it.
 
 ---
 
+## 9. Retry-helper audit `[VERIFIED 2026-08-02]`
+
+The retry helpers added on 2026-08-01 fired 17 times in one clean run, which is
+a good argument for having them and a bad sign about what they were covering.
+Each firing was labelled by call site in `rpc.log` and re-measured (16 in the
+audit run; the seventeenth was timing).
+
+**Every one classified (a) — a legitimate async wait expressed as a blind
+retry. None was a race-prone assertion (b).** All sixteen were the same thing:
+a dev RPC issued before the world's match existed.
+
+| Call site | Fired | Class | What it was really waiting for | Now |
+|---|---|---|---|---|
+| `verify_m2.sh` — `set_tide CATCH1 0.02` | 2 | (a) | world live, after two clients launch | `await_world_live` on the actor's log |
+| `verify_m4.sh` — `teach CFA/CFB/CFC/CFD` | 8 (2×4) | (a) | world live, after the primer launches | `await_world_live` on each primer's log |
+| `verify_m9.sh` — `wait_for_phase WRM HIGH` | 6 | (a) | world live — windowed app, ~3× slower boot | split into `await_phase`: live, then one RPC, then the client's own phase report |
+
+The condition is now named and observable rather than inferred: a match exists
+once a client has joined one, and the client announces `join ok` in its own log.
+`WORLD_LIVE_TIMEOUT` (45s) and `PHASE_TIMEOUT` (45s) fail loudly rather than
+silently taking longer.
+
+Two nearby sleeps were converted in passing because they were the same defect
+spelled differently — `sleep 12` and `sleep 10` in M2 standing in for liveness,
+and `sleep 6` / `sleep 8` in M9.
+
+**Result: zero retry firings across the entire suite** (all eight `rpc.log`
+files), with the backstop retained. Nothing was weakened to get there — M2
+16/16, M4 20/20 and M9 19/19 are the same check counts as before the change.
+Full suite after: **186 checks, 1 failure** (M8 AC5).
+
+---
+
 ## 8. Next three actions
 
 1. **M8 AC5 — log a playtest.** Two humans, one session, an entry in
@@ -239,5 +276,6 @@ asserts nothing stands in for it.
    PLAN, M11's exit criterion is a stranger-couple playing Act 1 start to finish
    without the editor.
 
-`NEXT.md` queue version 2026-07-31.2 is **fully terminal** — every item
-`[DONE]`. Awaiting a new `NEXT.md`.
+`NEXT.md` queue version **2026-07-31.3** is **fully terminal** — both items
+`[DONE]`. Awaiting a new `NEXT.md`, which per that queue arrives after
+`PLAYTESTS.md` has its first entry.
