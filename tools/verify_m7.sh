@@ -53,7 +53,7 @@ retry_rpc() { # retry_rpc <command...>
   local i out
   for i in $(seq 1 20); do
     out=$("$@")
-    printf '%s\n' "$out" | rpc_log
+    printf '[%s] attempt %s: %s\n' "$*" "$i" "$out" | rpc_log
     case "$out" in
       *"no live match"*) sleep 1.0 ;;
       *) return 0 ;;

@@ -52,6 +52,24 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
 # M4 is about the crafting wheel, and the wheel does not care which recipe
 # taught it — so put the world into the taught state rather than playing the
 # crab's errand inside a crafting test.
+## Wait until the world's match is actually LIVE, with a named timeout.
+##
+## Every dev RPC needs a live match, and a match exists once a client has joined
+## one — so that is the condition, and the client announces it in its own log.
+## Retrying the RPC until it stopped failing measured the same thing by bouncing
+## off it: correct, but it hid how long we were waiting, and it filed the
+## evidence in rpc.log instead of at the point that cared.
+WORLD_LIVE_TIMEOUT=45
+await_world_live() { # await_world_live <client-logfile>
+  local log="$1" i
+  for i in $(seq 1 $((WORLD_LIVE_TIMEOUT * 2))); do
+    grep -q "join ok" "$log" 2>/dev/null && return 0
+    sleep 0.5
+  done
+  echo "world never came live within ${WORLD_LIVE_TIMEOUT}s: $log" >&2
+  return 1
+}
+
 teach_once() { # teach_once <world>
   curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
@@ -73,7 +91,7 @@ teach() { # teach <world>
   local i out
   for i in $(seq 1 20); do
     out=$(teach_once "$1")
-    printf '%s\n' "$out" >>"$OUT/rpc.log"
+    printf '[teach %s] attempt %s: %s\n' "$1" "$i" "$out" >>"$OUT/rpc.log"
     case "$out" in
       *'"ok":true'*) return 0 ;;
       *) sleep 1.0 ;;
@@ -88,6 +106,7 @@ echo "AC1 — craft succeeds only when affordable; inputs decrement and"
 echo "      output increments on BOTH clients atomically"
 echo "=============================================================="
 launch m4_craft_b --slot=keeper_b --world=CFA$TAG >/dev/null
+await_world_live "$OUT/m4_craft_b.log"
 teach CFA$TAG
 launch m4_craft_a --slot=keeper_a --world=CFA$TAG $SEED --autowalk=craft_at_bench >/dev/null
 sleep 24
@@ -128,6 +147,7 @@ echo "=============================================================="
 # be disabled for the wrong reason and the check would pass without meaning it.
 # So the teaching has to be finished before the route can reach the bench.
 launch m4_short_primer --slot=keeper_b --world=CFB$TAG >/dev/null
+await_world_live "$OUT/m4_short_primer.log"
 teach CFB$TAG
 launch m4_short --slot=keeper_a --world=CFB$TAG --debug-gather=driftwood_01,kelp_01 \
   --autowalk=craft_unaffordable >/dev/null
@@ -161,6 +181,7 @@ echo "=============================================================="
 echo "AC3 — the radial is operable by stick AND by d-pad"
 echo "=============================================================="
 launch m4_stick_primer --slot=keeper_b --world=CFC$TAG >/dev/null
+await_world_live "$OUT/m4_stick_primer.log"
 teach CFC$TAG
 launch m4_stick --slot=keeper_a --world=CFC$TAG $SEED --autowalk=craft_at_bench >/dev/null
 sleep 24
@@ -168,6 +189,7 @@ kill_all
 STICK=$(grep -oE "\[radial\] crafting patch_kit at workbench" "$OUT/m4_stick.log" | tail -1)
 
 launch m4_dpad_primer --slot=keeper_b --world=CFD$TAG >/dev/null
+await_world_live "$OUT/m4_dpad_primer.log"
 teach CFD$TAG
 launch m4_dpad --slot=keeper_a --world=CFD$TAG $SEED --autowalk=craft_dpad >/dev/null
 sleep 24

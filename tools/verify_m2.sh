@@ -46,12 +46,30 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
 # taught a world that did not exist yet and blamed the milestone chain four
 # steps later, and verify_m4.sh raced its own autowalk route. Both were
 # invisible because the answer went to /dev/null.
+## Wait until the world's match is actually LIVE, with a named timeout.
+##
+## Every dev RPC needs a live match, and a match exists once a client has joined
+## one — so that is the condition, and the client announces it in its own log.
+## Retrying the RPC until it stopped failing measured the same thing by bouncing
+## off it: correct, but it hid how long we were waiting, and it filed the
+## evidence in rpc.log instead of at the point that cared.
+WORLD_LIVE_TIMEOUT=45
+await_world_live() { # await_world_live <client-logfile>
+  local log="$1" i
+  for i in $(seq 1 $((WORLD_LIVE_TIMEOUT * 2))); do
+    grep -q "join ok" "$log" 2>/dev/null && return 0
+    sleep 0.5
+  done
+  echo "world never came live within ${WORLD_LIVE_TIMEOUT}s: $log" >&2
+  return 1
+}
+
 rpc_log() { cat >>"$OUT/rpc.log"; echo >>"$OUT/rpc.log"; }
 retry_rpc() { # retry_rpc <command...>
   local i out
   for i in $(seq 1 20); do
     out=$("$@")
-    printf '%s\n' "$out" | rpc_log
+    printf '[%s] attempt %s: %s\n' "$*" "$i" "$out" | rpc_log
     case "$out" in
       *"no live match"*) sleep 1.0 ;;
       *) return 0 ;;
@@ -79,7 +97,9 @@ echo "AC1 — phase flips appear on both clients within 500ms"
 echo "=============================================================="
 launch m2_flip_a --slot=keeper_a --world=TIDE01 >/dev/null
 launch m2_flip_b --slot=keeper_b --world=TIDE01 >/dev/null
-sleep 12
+await_world_live "$OUT/m2_flip_a.log"
+await_world_live "$OUT/m2_flip_b.log"
+sleep 2   # both clients settled into the beach before the first flip
 set_tide TIDE01 0.0 >/dev/null
 sleep 3
 # Flip LOW -> MID and note when each client says so. Godot prints in order, so
@@ -130,7 +150,8 @@ echo "=============================================================="
 echo "AC2 — sky tint progresses LOW->HIGH and reads as time passing"
 echo "=============================================================="
 launch m2_sky --couch-both --world=SKY001 >/dev/null
-sleep 10
+await_world_live "$OUT/m2_sky.log"
+sleep 2
 for T in 0.00 0.06 0.12 0.19 0.25 0.31 0.37 0.44 0.50; do
   set_tide SKY001 "$T" >/dev/null
   sleep 1.5
@@ -182,6 +203,7 @@ echo "=============================================================="
 # A walks out onto the sandbar; B just watches and records.
 launch m2_catch_a --slot=keeper_a --world=CATCH1 --autowalk=to_sandbar --debug-gather=driftwood_04,kelp_02,glass_shard_02 >/dev/null
 launch m2_catch_b --slot=keeper_b --world=CATCH1 "--trace=$OUT/catch_b.csv" >/dev/null
+await_world_live "$OUT/m2_catch_a.log"
 set_tide CATCH1 0.02 >/dev/null   # LOW: the sandbar is walkable
 # "sleep 12 # let A finish walking out there" was a timed movement leg, which
 # the Testing law forbids for exactly this reason: when the client got slower to
@@ -256,7 +278,8 @@ echo "=============================================================="
 echo "AC4 — with no keepers connected, server tide t does not advance"
 echo "=============================================================="
 launch m2_idle --slot=keeper_a --world=IDLE01 >/dev/null
-sleep 12
+await_world_live "$OUT/m2_idle.log"
+sleep 2
 kill_all
 echo "        (no keepers connected for 30s...)"
 sleep 30

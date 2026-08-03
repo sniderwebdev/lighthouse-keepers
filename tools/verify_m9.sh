@@ -71,6 +71,24 @@ TOKEN=$(curl -s -X POST "$HOST/v2/account/authenticate/device?create=true" \
   -H "Content-Type: application/json" \
   -d '{"id":"verify-m9-device-0000"}' | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])')
 
+## Wait until the world's match is actually LIVE, with a named timeout.
+##
+## Every dev RPC needs a live match, and a match exists once a client has joined
+## one — so that is the condition, and the client announces it in its own log.
+## Retrying the RPC until it stopped failing measured the same thing by bouncing
+## off it: correct, but it hid how long we were waiting, and it filed the
+## evidence in rpc.log instead of at the point that cared.
+WORLD_LIVE_TIMEOUT=45
+await_world_live() { # await_world_live <client-logfile>
+  local log="$1" i
+  for i in $(seq 1 $((WORLD_LIVE_TIMEOUT * 2))); do
+    grep -q "join ok" "$log" 2>/dev/null && return 0
+    sleep 0.5
+  done
+  echo "world never came live within ${WORLD_LIVE_TIMEOUT}s: $log" >&2
+  return 1
+}
+
 setflag() { # setflag <world> <flag>
   curl -s -X POST "$HOST/v2/rpc/debug_set_flag" -H "Authorization: Bearer $TOKEN" \
     -H "Content-Type: application/json" \
@@ -83,22 +101,24 @@ set_tide() { # set_tide <world> <t>
     -d "\"{\\\"world_code\\\":\\\"$1\\\",\\\"t\\\":$2}\""
 }
 
-## Ask until the CLIENT says it got there, rather than asking once and sleeping.
+## Drive the tide to a phase, then wait for the CLIENT to say it got there.
 ##
-## A single fire-and-forget call races the world: the RPC needs a live match in
-## the world index, and the client needs to have entered the beach to hear the
-## answer. Sleeping a guessed number of seconds either flakes or is slower than
-## it needs to be — and a timed leg is exactly what the Testing law forbids
-## everywhere else, so it has no business here either.
-wait_for_phase() { # wait_for_phase <world> <t> <phase> <logfile>
+## Two conditions, kept apart: the world must be live before the RPC can land,
+## and the client must observe the flip before any assertion can read it. Both
+## are named waits with their own timeout rather than one loop that retried the
+## RPC until both happened to be true.
+PHASE_TIMEOUT=45
+await_phase() { # await_phase <world> <t> <phase> <logfile>
   local world="$1" t="$2" want="$3" log="$4" i
-  for i in $(seq 1 20); do
-    if grep -q "\[beach\] phase=$want" "$log" 2>/dev/null; then return 0; fi
-    set_tide "$world" "$t" >>"$OUT/rpc.log" 2>&1
-    echo >>"$OUT/rpc.log"
-    sleep 1.5
+  await_world_live "$log" || return 1
+  printf '[await_phase %s %s] %s\n' "$world" "$want" \
+    "$(set_tide "$world" "$t" 2>&1)" >>"$OUT/rpc.log"
+  for i in $(seq 1 $((PHASE_TIMEOUT * 2))); do
+    grep -q "\[beach\] phase=$want" "$log" 2>/dev/null && return 0
+    sleep 0.5
   done
-  grep -q "\[beach\] phase=$want" "$log" 2>/dev/null
+  echo "phase $want never observed within ${PHASE_TIMEOUT}s: $log" >&2
+  return 1
 }
 
 echo "=============================================================="
@@ -167,7 +187,8 @@ echo "=============================================================="
 
 GLM=GLM$TAG
 launch m9_glimmer --slot=keeper_a --world=$GLM >/dev/null
-sleep 8
+await_world_live "$OUT/m9_glimmer.log"
+sleep 4   # let the glimmer report its opening state before the flag lands
 # Before: the water is empty, because nobody has told you to look at it.
 BEFORE=$(grep -oE "\[glimmer\] (watching|dark)" "$OUT/m9_glimmer.log" | tail -1)
 [ "$BEFORE" = "[glimmer] dark" ]
@@ -218,7 +239,7 @@ echo "=============================================================="
 WRM=WRM$TAG
 "$APP" -- --slot=keeper_a --world=$WRM --couch-both \
   --shot="$OUT/high_tide.png" --shot-at=45 >"$OUT/m9_warm_world.log" 2>&1 &
-wait_for_phase $WRM 0.6 HIGH "$OUT/m9_warm_world.log"   # 0.6 is squarely inside HIGH
+await_phase $WRM 0.6 HIGH "$OUT/m9_warm_world.log"   # 0.6 is squarely inside HIGH
 # The shutter is on a timer inside the game and the run quits itself once it
 # fires; --shot-at is generous so the water is always where we want it first.
 for i in $(seq 1 50); do [ -f "$OUT/high_tide.png" ] && break; sleep 1.5; done
@@ -290,7 +311,7 @@ set_cycle_seconds() { # set_cycle_seconds <world> <seconds>
 }
 
 launch m9_pacing --slot=keeper_a --world=$PAC >/dev/null
-sleep 6
+await_world_live "$OUT/m9_pacing.log"
 set_cycle_seconds $PAC 40      # a phase every ten seconds
 # Wait for the world to turn a cycle by itself. bottle_02 is NOT eligible yet —
 # read_bottle_01 is unset — so this boundary spawns nothing, which is the point:
